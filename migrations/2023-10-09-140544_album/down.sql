@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS album_image;
+DROP TABLE IF EXISTS album_rating_score;
+DROP TABLE IF EXISTS album_tag;
+DROP TABLE IF EXISTS album;

@@ -1,0 +1,41 @@
+version: '3.3'
+services:
+  db1:
+    image: postgres:latest 
+    restart: always
+    ports: 
+      - '5432:5432'
+    environment:
+      POSTGRES_PASSWORD: 'dev_only_pwd'
+      POSTGRES_DB: 'wooboo3'
+    volumes:
+      - database_data:/var/lib/postgresql/data
+  wooboo3:
+    build:
+      context: '.'
+      dockerfile: 'DockerfileApp'
+    ports:
+      - '8080:8080'
+    links:
+      - db1
+    environment:
+      - DATABASE_URL=postgres://postgres:dev_only_pwd@db1/wooboo3
+      - WEB_FOLDER=/test_factory_upload
+      - RUST_LOG=wooboo_v3_be=debug
+    volumes:
+      - /home/mishaszu/Mike/test_factory_upload:/test_factory_upload
+  lust:
+    build:
+      context: '.'
+      dockerfile: 'DockerfileLust'
+    ports:
+      - '8000:8000'
+    environment:
+      CONFIG_FILE: '/var/lust/config.yaml'
+    volumes:
+      - /home/mishaszu/Mike/test_factory:/test_factory
+
+
+volumes:
+  database_data:
+    driver: local

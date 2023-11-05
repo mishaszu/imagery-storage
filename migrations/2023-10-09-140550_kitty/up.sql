@@ -1,0 +1,57 @@
+CREATE TABLE kitty (
+    id UUID PRIMARY KEY,
+    name VARCHAR(255) UNIQUE NOT NULL,
+    names TEXT,
+    picture_id UUID,
+		album_id UUID,
+    description TEXT,
+    age INTEGER,
+    origin VARCHAR(255),
+    is_favorite BOOLEAN NOT NULL DEFAULT FALSE,
+    fc INTEGER NOT NULL DEFAULT 0,
+    wsic INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (picture_id) REFERENCES image (id),
+		FOREIGN KEY (album_id) REFERENCES album (id)
+);
+
+CREATE TABLE kitty_image (
+    id UUID PRIMARY KEY,
+    image_id UUID NOT NULL,
+    kitty_id UUID NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (image_id) REFERENCES image (id) ON DELETE CASCADE,
+    FOREIGN KEY (kitty_id) REFERENCES kitty (id) ON DELETE CASCADE
+);
+
+CREATE TABLE kitty_album (
+	  id UUID PRIMARY KEY,
+	  kitty_id UUID NOT NULL,
+	  album_id UUID NOT NULL,
+	  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	  FOREIGN KEY (kitty_id) REFERENCES kitty (id) ON DELETE CASCADE,
+	  FOREIGN KEY (album_id) REFERENCES album (id) ON DELETE CASCADE
+);
+
+CREATE TABLE kitty_tag (
+    id UUID PRIMARY KEY,
+    kitty_id UUID NOT NULL,
+    tag_id UUID NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (kitty_id) REFERENCES kitty (id) ON DELETE CASCADE,
+    FOREIGN KEY (tag_id) REFERENCES tag (id) ON DELETE CASCADE
+);
+
+CREATE TABLE kitty_rating_score (
+    id UUID PRIMARY KEY,
+    kitty_id UUID NOT NULL,
+    rating_score_id UUID NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (kitty_id) REFERENCES kitty (id) ON DELETE CASCADE,
+    FOREIGN KEY (rating_score_id) REFERENCES rating_score (id) ON DELETE CASCADE
+);

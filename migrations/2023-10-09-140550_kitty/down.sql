@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS kitty_image;
+DROP TABLE IF EXISTS kitty_album;
+DROP TABLE IF EXISTS kitty_tag;
+DROP TABLE IF EXISTS kitty_rating_score;
+DROP TABLE IF EXISTS kitty;

@@ -1,8 +1,56 @@
 [package]
-name = "imagery-storage"
+name = "wooboo-v3-be"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+tokio = { version = "1", features = ["full"] }
+tokio-stream = "0.1"
+# -- Json
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_with = "3"
+# -- Web
+axum = "0.6"
+tower-cookies = "0.9"
+tower-http = { version = "0.4", features = ["fs"] }
+# -- Data
+async-graphql = "6.0"
+async-graphql-axum = "6.0"
+diesel = { version = "2.1", features = ["postgres", "r2d2", "chrono", "uuid"] }
+diesel_migrations = "2.1"
+r2d2 = "0.8"
+# -- Tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+# -- Crypt & Encoding
+argon2 = "0.5"
+base64 = "0.21"
+data-encoding = "2"
+hmac = "0.12"
+jwt = "0.16"
+openssl = { version = "0.10", features = ["vendored"] }
+rand = "0.8"
+regex = "1.5"
+ring = "0.17"
+sha2 = "0.10"
+# -- Env
+dotenv = "0.15"
+# -- Others
+async-trait = "0.1"
+chrono = { version = "0.4", features = ["serde"] }
+chronoutil = "0.2.3"
+derive_more = "0.99"
+lazy-regex = "3"
+strum_macros = "0.25"
+uuid = {version = "1", features = ["v4", "serde", "fast-rng",]}
+reqwest = { version = "0.11", features = ["json"] }
+bytes = "1.5"
+
+[dev-dependencies]
+anyhow = "1"
+httpc-test = "0.1.1"
+serial_test = "2"
+

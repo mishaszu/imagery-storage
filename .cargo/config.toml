@@ -1,0 +1,11 @@
+[env]
+DATABASE_URL="postgres://postgres:dev_only_pwd@localhost/wooboo3"
+WEB_FOLDER="/home/mishaszu/Mike/test_factory_upload"
+RUST_LOG="wooboo_v3_be=debug"
+PWD_KEY="CKUGFOD9_2Qf6Pn3ZFRYgPYb8ht4vKqEG9PGMXTB7497bT0367DjoaD6ydFnEVaIRda0kKeBZVCT5Hb62m2sCA"
+LUST_URL="http://localhost:8000/v1/images/wooboo"
+
+TOKEN_SECRET="9FoHBmkyxbgu_xFoQK7e0jz3RMNVJWgfvbVn712FBNH9LLaAWS3CS6Zpcg6RveiObvCUb6a2z-uAiLjhLh2igw"
+
+# 30 days
+TOKEN_DURATION="2592000"
