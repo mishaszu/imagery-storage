@@ -4,11 +4,12 @@ use axum::response::IntoResponse;
 use serde::Deserialize;
 use tracing::error;
 
-use super::GraphQlState;
 use crate::services::lust::Lust;
 
 use crate::services::raw_file::read_file;
 use crate::web::error::Error;
+
+use super::ApiState;
 
 #[derive(Deserialize)]
 pub struct Image {
@@ -17,11 +18,10 @@ pub struct Image {
 }
 
 pub async fn get_image(
-    State(context): State<GraphQlState>,
+    State(context): State<ApiState>,
     Query(payload): Query<Image>,
 ) -> Result<impl IntoResponse, Error> {
     let client = context.reqwest_client;
-
     let mut params = vec![("format".to_string(), "jpeg".to_string())];
 
     match payload.size {

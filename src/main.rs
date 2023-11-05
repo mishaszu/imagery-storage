@@ -8,6 +8,7 @@ use tracing_subscriber::EnvFilter;
 
 pub use self::config::config;
 pub use self::error::{Error, Result};
+use self::web::graphql as graphql_routes;
 use self::web::middleware::mw_auth::mw_ctx_resolve;
 use self::web::routes_login;
 
@@ -34,6 +35,7 @@ async fn main() -> Result<()> {
 
     let routes_all = Router::new()
         .merge(routes_login::routes(mm.clone()))
+        .nest("/graphql", graphql_routes::routes(mm.clone()))
         .nest("/api", web::api::routes(mm.clone()))
         .route("/hello", get(hello_world))
         .layer(middleware::from_fn_with_state(mm.clone(), mw_ctx_resolve))

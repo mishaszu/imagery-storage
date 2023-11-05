@@ -1,5 +1,6 @@
 pub mod api;
 mod error;
+pub mod graphql;
 pub mod middleware;
 pub mod routes_login;
 

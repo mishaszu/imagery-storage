@@ -1,3 +1,0 @@
-DROP TABLE IF EXISTS image_tag;
-DROP TABLE IF EXISTS image_rating_score;
-DROP TABLE IF EXISTS image;

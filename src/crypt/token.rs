@@ -14,20 +14,18 @@ pub struct Token(String);
 pub struct TokenClaims {
     pub id: Uuid,
     pub user_id: Uuid,
-    pub name: String,
-    pub subscription: String,
+    pub nick: String,
     pub exp: String,
 }
 
 impl Token {
-    pub fn new(user_id: &Uuid, name: &str, subscription: &str) -> Result<Token> {
+    pub fn new(user_id: &Uuid, nick: &str) -> Result<Token> {
         let key: Hmac<Sha512> = Hmac::new_from_slice(&config::config().TOKEN_SECRET)
             .map_err(|_| Error::TokenInvalidSecret)?;
         let mut claims = BTreeMap::new();
         claims.insert("id", Uuid::new_v4().to_string());
         claims.insert("user_id", user_id.to_string());
-        claims.insert("name", name.to_string());
-        claims.insert("subscription", subscription.to_string());
+        claims.insert("nick", nick.to_string());
         let exp = Local::now() + chrono::Duration::seconds(config::config().TOKEN_DURATION);
         claims.insert("exp", exp.to_rfc3339());
 
@@ -49,12 +47,8 @@ impl Token {
             .map_err(|_| Error::TokenParseFailed)?;
         let user_id = Uuid::parse_str(claims.get("user_id").ok_or(Error::TokenParseFailed)?)
             .map_err(|_| Error::TokenParseFailed)?;
-        let name = claims
-            .get("name")
-            .ok_or(Error::TokenParseFailed)?
-            .to_string();
-        let subscription = claims
-            .get("subscription")
+        let nick = claims
+            .get("nick")
             .ok_or(Error::TokenParseFailed)?
             .to_string();
         let exp = claims
@@ -64,8 +58,7 @@ impl Token {
         Ok(TokenClaims {
             id,
             user_id,
-            name,
-            subscription,
+            nick,
             exp,
         })
     }

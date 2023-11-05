@@ -7,10 +7,10 @@ services:
       - '5432:5432'
     environment:
       POSTGRES_PASSWORD: 'dev_only_pwd'
-      POSTGRES_DB: 'wooboo3'
+      POSTGRES_DB: 'imagery'
     volumes:
       - database_data:/var/lib/postgresql/data
-  wooboo3:
+  imagery:
     build:
       context: '.'
       dockerfile: 'DockerfileApp'
@@ -19,11 +19,8 @@ services:
     links:
       - db1
     environment:
-      - DATABASE_URL=postgres://postgres:dev_only_pwd@db1/wooboo3
-      - WEB_FOLDER=/test_factory_upload
-      - RUST_LOG=wooboo_v3_be=debug
-    volumes:
-      - /home/mishaszu/Mike/test_factory_upload:/test_factory_upload
+      - DATABASE_URL=postgres://postgres:dev_only_pwd@db1/imagery
+      - RUST_LOG=imagery_storage=debug
   lust:
     build:
       context: '.'
@@ -33,7 +30,7 @@ services:
     environment:
       CONFIG_FILE: '/var/lust/config.yaml'
     volumes:
-      - /home/mishaszu/Mike/test_factory:/test_factory
+      - ~/imagery_storage:/imagery_storage
 
 
 volumes:

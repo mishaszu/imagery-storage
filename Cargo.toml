@@ -1,5 +1,5 @@
 [package]
-name = "wooboo-v3-be"
+name = "imagery-storage"
 version = "0.1.0"
 edition = "2021"
 

@@ -1,11 +1,11 @@
 backend:
   filesystem:  # Use the filesystem backend.
-    directory: "/test_factory"
+    directory: "/imagery_storage"
 
 base_serving_path: "/images"  # Serve buckets out of `/images`
 
 buckets:
-  wooboo:  # Define a bucket called "user-profiles", this is accessable out of `/images/user-profiles`.
+  imagery:  # Define a bucket called "user-profiles", this is accessable out of `/images/user-profiles`.
     mode: jit     # Optimise images as and when they're required then store them.
     formats: 
       png: false  # Disable PNG encoding.

@@ -1,8 +1,8 @@
 FROM rust:1.70 as build
 
 # create a new empty shell project
-RUN USER=root cargo new --bin wooboo-v3-be
-WORKDIR /wooboo-v3-be
+RUN USER=root cargo new --bin imagery_storage
+WORKDIR /imagery_storage
 
 # copy over your manifests
 COPY ./Cargo.lock ./Cargo.lock
@@ -25,12 +25,12 @@ RUN cargo build --release
 FROM debian:12
 
 # copy the build artifact from the build stage
-COPY --from=build /wooboo-v3-be/target/release/wooboo-v3-be .
-COPY --from=build /wooboo-v3-be/target/release/wooboo-v3-be ./migrations
+COPY --from=build /iagery_storage/target/release/imagery_storage .
+COPY --from=build /iagery_storage/target/release/imagery_storage ./migrations
 RUN apt-get update && apt-get install -y libpq-dev
 
 RUN mkdir -p test_factory_upload
 
 # set the startup command to run your binary
-CMD ["./wooboo-v3-be"]
+CMD ["./imagery_storage"]
 

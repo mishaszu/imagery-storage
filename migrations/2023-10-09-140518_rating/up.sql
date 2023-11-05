@@ -1,8 +1,0 @@
-CREATE TABLE rating (
-    id UUID PRIMARY KEY,
-    name VARCHAR(255) UNIQUE NOT NULL,
-    scale TEXT NOT NULL,
-    description TEXT NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-);

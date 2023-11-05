@@ -2,16 +2,17 @@ use crate::config;
 
 use self::store::{DbConn, Pool};
 
+pub mod account;
 pub mod album;
+pub mod comment;
 pub mod error;
+pub mod favorite_image;
+pub mod follow;
 pub mod image;
-pub mod kitty;
-pub mod link;
-pub mod rating;
-pub mod rating_score;
 mod store;
+pub mod sys_config;
 pub mod tag;
-pub mod tag_category;
+pub mod theme;
 pub mod user;
 
 pub use self::error::{Error, Result};

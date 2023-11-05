@@ -21,7 +21,7 @@ async fn login_handler(
     cookies: Cookies,
     Form(payload): Form<UserLogin>,
 ) -> Result<Json<Value>> {
-    let user = UserBmc::get_by_name(&mm, &payload.name)?;
+    let user = UserBmc::get_by_email(&mm, &payload.email)?;
     let is_valid = user.validate_pwd(&payload.password);
     match is_valid {
         Ok(_) => {
@@ -30,7 +30,7 @@ async fn login_handler(
             Ok(Json(json!({ "success": true })))
         }
         Err(_) => Err(Error::LoginFailPwdNotMatching {
-            user_id: payload.name,
+            user_id: payload.email,
         }),
     }
 }
@@ -42,6 +42,6 @@ async fn logout_handler(cookies: Cookies) -> Result<Json<Value>> {
 
 #[derive(Deserialize)]
 struct UserLogin {
-    name: String,
+    email: String,
     password: String,
 }
