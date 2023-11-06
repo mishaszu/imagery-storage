@@ -6,7 +6,7 @@ CREATE TABLE tag (
 );
 
 CREATE TABLE image_tag (
-  id SERIAL PRIMARY KEY,
+  id UUID PRIMARY KEY,
   image_id UUID NOT NULL,
   tag_id UUID NOT NULL,
   FOREIGN KEY (image_id) REFERENCES image (id) ON DELETE CASCADE,

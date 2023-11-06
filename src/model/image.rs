@@ -4,39 +4,38 @@ use diesel::{
 };
 use uuid::Uuid;
 
-use crate::schema::account::is_public;
-use crate::schema::{album_image, image};
+use crate::schema::image;
 
 #[derive(Debug, Clone, PartialEq, Identifiable, Queryable)]
 #[diesel(table_name = image)]
 pub struct Image {
-    id: Uuid,
-    user_id: Uuid,
-    name: Option<String>,
-    description: Option<String>,
-    path: Uuid,
-    is_public: bool,
-    created_at: chrono::NaiveDateTime,
-    updated_at: chrono::NaiveDateTime,
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub path: Uuid,
+    pub is_public: bool,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
 }
 
 #[derive(Debug, Clone, Insertable)]
 #[diesel(table_name = image)]
 pub struct ImageForCreate {
     pub id: Uuid,
-    user_id: Uuid,
-    name: Option<String>,
-    description: Option<String>,
-    path: Uuid,
+    pub user_id: Uuid,
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub path: Uuid,
 }
 
 #[derive(Default, Debug, Clone, AsChangeset)]
 #[diesel(table_name = image)]
 pub struct ImageForUpdate {
-    name: Option<String>,
-    description: Option<String>,
-    path: Option<Uuid>,
-    updated_at: chrono::NaiveDateTime,
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub path: Option<Uuid>,
+    pub updated_at: chrono::NaiveDateTime,
 }
 
 pub struct ImageBmc;
@@ -62,33 +61,10 @@ impl ImageBmc {
             .map_err(|e| -> crate::model::Error { e.into() })
     }
 
-    pub fn list(
-        mm: &crate::model::ModelManager,
-        user_id: Option<&Uuid>,
-        album_id: Option<&Uuid>,
-        is_public: Option<bool>,
-    ) -> crate::model::Result<Vec<Image>> {
+    pub fn list(mm: &crate::model::ModelManager) -> crate::model::Result<Vec<Image>> {
         let mut connection = mm.conn()?;
 
-        let mut builder = image::dsl::image;
-
-        if let Some(album_id) = album_id {
-            builder = builder.inner_join(album_image::dsl::album_image).filter(
-                album_image::dsl::album_id
-                    .eq(album_id)
-                    .and(album_image::dsl::image_id.eq(image::dsl::id)),
-            );
-        }
-
-        if let Some(user_id) = user_id {
-            builder = builder.filter(image::dsl::user_id.eq(user_id));
-        }
-
-        if let Some(is_public) = is_public {
-            builder = builder.filter(image::dsl::is_public.eq(is_public));
-        }
-
-        builder
+        image::dsl::image
             .load::<Image>(&mut connection)
             .map_err(|e| -> crate::model::Error { e.into() })
     }

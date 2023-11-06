@@ -11,48 +11,48 @@ use crate::schema::{album, album_image, image};
 #[derive(Debug, Clone, PartialEq, Identifiable, Queryable)]
 #[diesel(table_name = album)]
 pub struct Album {
-    id: Uuid,
-    user_id: Uuid,
-    name: String,
-    description: String,
-    picture: Option<Uuid>,
-    is_public: bool,
-    created_at: chrono::NaiveDateTime,
-    updated_at: chrono::NaiveDateTime,
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub name: String,
+    pub description: String,
+    pub picture: Option<Uuid>,
+    pub is_public: bool,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
 }
 
 #[derive(Insertable)]
 #[diesel(table_name = album)]
 pub struct AlbumForCreate {
-    id: Uuid,
-    name: String,
-    description: Option<String>,
+    pub id: Uuid,
+    pub name: String,
+    pub description: Option<String>,
 }
 
 #[derive(AsChangeset, Insertable)]
 #[diesel(table_name = album)]
 pub struct AlbumForUpdate {
-    name: Option<String>,
-    description: Option<String>,
-    picture: Option<Uuid>,
-    is_public: Option<bool>,
-    updated_at: chrono::NaiveDateTime,
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub picture: Option<Uuid>,
+    pub is_public: Option<bool>,
+    pub updated_at: chrono::NaiveDateTime,
 }
 
 #[derive(Debug, Clone, PartialEq, Identifiable, Queryable)]
 #[diesel(table_name = album_image)]
 pub struct AlbumImage {
-    id: Uuid,
-    album_id: Uuid,
-    image_id: Uuid,
+    pub id: Uuid,
+    pub album_id: Uuid,
+    pub image_id: Uuid,
 }
 
 #[derive(Debug, Clone, Insertable)]
 #[diesel(table_name = album_image)]
 pub struct AlbumImageForCreate {
-    id: Uuid,
-    album_id: Uuid,
-    image_id: Uuid,
+    pub id: Uuid,
+    pub album_id: Uuid,
+    pub image_id: Uuid,
 }
 
 pub struct AlbumBmc;

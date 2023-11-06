@@ -1,7 +1,7 @@
 use async_graphql::{Context, Object, Result};
 
 use crate::model::ModelManager;
-use crate::web::api::graphql::error::Error as GraphQLError;
+use crate::web::graphql::error::Error as GraphQLError;
 use crate::{graphql::scalars::Id, model::tag::TagBmc};
 
 use super::model::{Tag, TagForCreate, TagForUpdate};

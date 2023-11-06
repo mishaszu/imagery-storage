@@ -6,24 +6,24 @@ use diesel::{
 };
 use uuid::Uuid;
 
-use crate::schema::tag;
+use crate::schema::{image_tag, tag};
 
 use super::{ModelManager, Result};
 
 #[derive(Debug, Clone, PartialEq, Identifiable, Queryable)]
 #[diesel(table_name = tag)]
 pub struct Tag {
-    id: Uuid,
-    name: String,
-    created_at: chrono::NaiveDateTime,
-    updated_at: chrono::NaiveDateTime,
+    pub id: Uuid,
+    pub name: String,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
 }
 
 #[derive(Insertable)]
 #[diesel(table_name = tag)]
 pub struct TagForCreate {
-    id: Uuid,
-    name: String,
+    pub id: Uuid,
+    pub name: String,
 }
 
 #[derive(AsChangeset, Insertable)]
@@ -31,6 +31,22 @@ pub struct TagForCreate {
 pub struct TagForUpdate {
     pub name: Option<String>,
     pub updated_at: chrono::NaiveDateTime,
+}
+
+#[derive(Debug, Clone, PartialEq, Identifiable, Queryable)]
+#[diesel(table_name = image_tag)]
+pub struct TagImage {
+    pub id: Uuid,
+    pub image_id: Uuid,
+    pub tag_id: Uuid,
+}
+
+#[derive(Debug, Clone, Insertable)]
+#[diesel(table_name = image_tag)]
+pub struct TagImageForCreate {
+    pub id: Uuid,
+    pub image_id: Uuid,
+    pub tag_id: Uuid,
 }
 
 pub struct TagBmc;
@@ -49,6 +65,21 @@ impl TagBmc {
         tag::dsl::tag
             .filter(tag::dsl::id.eq(&id))
             .first::<Tag>(&mut connection)
+            .map_err(|e| e.into())
+    }
+
+    pub fn add_tag(mm: &ModelManager, tag_image: TagImageForCreate) -> Result<TagImage> {
+        let mut connection = mm.conn()?;
+        diesel::insert_into(image_tag::dsl::image_tag)
+            .values(&tag_image)
+            .get_result::<TagImage>(&mut connection)
+            .map_err(|e| e.into())
+    }
+
+    pub fn remove_tag(mm: &ModelManager, tag_image_id: &Uuid) -> Result<usize> {
+        let mut connection = mm.conn()?;
+        diesel::delete(image_tag::dsl::image_tag.filter(image_tag::dsl::id.eq(tag_image_id)))
+            .execute(&mut connection)
             .map_err(|e| e.into())
     }
 

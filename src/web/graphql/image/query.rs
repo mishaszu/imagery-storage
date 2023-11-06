@@ -1,6 +1,6 @@
 use async_graphql::{Context, Object, Result};
 
-use crate::web::api::graphql::error::Error as GraphQLError;
+use crate::web::graphql::error::Error as GraphQLError;
 use crate::{graphql::scalars::Id, model::ModelManager};
 
 use super::model::Image;

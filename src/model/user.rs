@@ -73,6 +73,14 @@ impl UserBmc {
             .map_err(|e| e.into())
     }
 
+    pub fn get_by_email(mm: &ModelManager, user_email: &str) -> Result<User> {
+        let mut connection = mm.conn()?;
+        users::dsl::users
+            .filter(users::dsl::email.eq(user_email))
+            .first::<User>(&mut connection)
+            .map_err(|e| e.into())
+    }
+
     pub fn list(mm: &ModelManager) -> Result<Vec<User>> {
         let mut connection = mm.conn()?;
         users::dsl::users

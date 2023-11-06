@@ -86,7 +86,7 @@ diesel::table! {
 
 diesel::table! {
     image_tag (id) {
-        id -> Int4,
+        id -> Uuid,
         image_id -> Uuid,
         tag_id -> Uuid,
     }
