@@ -3,12 +3,12 @@ CREATE TABLE account (
   referral_id UUID UNIQUE,
   email VARCHAR(255) NOT NULL UNIQUE,
   kind VARCHAR(255) NOT NULL DEFAULT 'commenter',
+  followee_id UUID,
   is_admin BOOLEAN NOT NULL DEFAULT FALSE,
-  is_public BOOLEAN NOT NULL DEFAULT FALSE,
-  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  public_lvl INT NOT NULL DEFAULT 0,
   is_banned BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- initial password to change: test_pass

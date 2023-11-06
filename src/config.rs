@@ -13,7 +13,6 @@ pub fn config() -> &'static Config {
 #[allow(non_snake_case)]
 pub struct Config {
     pub DB_URL: String,
-    pub WEB_FOLDER: String,
     pub LUST_URL: String,
     pub TOKEN_SECRET: Vec<u8>,
     pub PWD_KEY: Vec<u8>,
@@ -24,7 +23,6 @@ impl Config {
     fn load_from_env() -> Result<Config> {
         Ok(Config {
             DB_URL: get_env("DATABASE_URL")?,
-            WEB_FOLDER: get_env("WEB_FOLDER")?,
             LUST_URL: get_env("LUST_URL")?,
             TOKEN_SECRET: get_env_b64u_as_u8s("TOKEN_SECRET")?,
             PWD_KEY: get_env_b64u_as_u8s("PWD_KEY")?,

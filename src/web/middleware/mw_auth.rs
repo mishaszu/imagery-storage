@@ -63,9 +63,12 @@ async fn _ctx_resolve(mm: State<ModelManager>, cookies: &Cookies) -> CtxExtResul
         .map_err(|_| CtxExtError::FailValidate)?;
 
     // -- Get UserForAuth
-    let user = UserBmc::get(&mm, &token_claims.user_id).map_err(|_| CtxExtError::UserNotFound)?;
-    let account =
-        AccountBmc::get_user(&mm, &user.account_id).map_err(|_| CtxExtError::UserNotFound)?;
+    let user = UserBmc::get(&mm, &token_claims.user_id).map_err(|_| {
+        debug!("error!");
+        CtxExtError::UserNotFound
+    })?;
+
+    let account = AccountBmc::get(&mm, &user.account_id).map_err(|_| CtxExtError::UserNotFound)?;
 
     // -- Validate Token
     token.validate().map_err(|_| CtxExtError::FailValidate)?;

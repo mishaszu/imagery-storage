@@ -10,10 +10,10 @@ use crate::schema::comment;
 pub struct Comment {
     id: Uuid,
     user_id: Uuid,
-    image_id: Uuid,
+    post_id: Uuid,
     body: String,
-    created_at: chrono::NaiveDateTime,
-    updated_at: chrono::NaiveDateTime,
+    created_at: chrono::DateTime<chrono::Utc>,
+    updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(Debug, Clone, Insertable)]
@@ -21,7 +21,7 @@ pub struct Comment {
 pub struct CommentForCreate {
     pub id: Uuid,
     user_id: Uuid,
-    image_id: Uuid,
+    post_id: Uuid,
     body: String,
 }
 
@@ -29,7 +29,7 @@ pub struct CommentForCreate {
 #[diesel(table_name = comment)]
 pub struct CommentForUpdate {
     body: Option<String>,
-    updated_at: chrono::NaiveDateTime,
+    updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 pub struct CommentBmc;
@@ -53,11 +53,11 @@ impl CommentBmc {
             .map_err(|e| -> crate::model::Error { e.into() })
     }
 
-    pub fn list(mm: &ModelManager, image_id: &Uuid) -> Result<Vec<Comment>> {
+    pub fn list(mm: &ModelManager, post_id: &Uuid) -> Result<Vec<Comment>> {
         let mut connection = mm.conn()?;
 
         comment::dsl::comment
-            .filter(comment::dsl::image_id.eq(image_id))
+            .filter(comment::dsl::post_id.eq(post_id))
             .load::<Comment>(&mut connection)
             .map_err(|e| -> crate::model::Error { e.into() })
     }

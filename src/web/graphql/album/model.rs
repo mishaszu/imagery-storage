@@ -2,7 +2,7 @@ use async_graphql::{ComplexObject, Context, InputObject, Result, SimpleObject};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::graphql::scalars::Id;
+use crate::graphql::scalars::{DateTime, Id};
 
 #[derive(Debug, Clone, Serialize, SimpleObject)]
 #[graphql(complex)]
@@ -12,9 +12,9 @@ pub struct Album {
     pub name: String,
     pub description: String,
     pub picture: Option<Id>,
-    pub is_public: bool,
-    pub created_at: String,
-    pub updated_at: String,
+    pub public_lvl: i32,
+    pub created_at: DateTime,
+    pub updated_at: DateTime,
 }
 
 #[ComplexObject]
@@ -75,9 +75,9 @@ impl From<crate::model::album::Album> for Album {
             name: album.name,
             description: album.description,
             picture: album.picture.map(|id| id.into()),
-            is_public: album.is_public,
-            created_at: album.created_at.to_string(),
-            updated_at: album.updated_at.to_string(),
+            public_lvl: album.public_lvl,
+            created_at: album.created_at.into(),
+            updated_at: album.updated_at.into(),
         }
     }
 }
@@ -103,7 +103,7 @@ pub struct AlbumForUpdate {
     pub name: Option<String>,
     pub description: Option<String>,
     pub picture: Option<Id>,
-    pub is_public: Option<bool>,
+    pub public_lvl: Option<i32>,
 }
 
 impl Into<crate::model::album::AlbumForUpdate> for AlbumForUpdate {
@@ -112,24 +112,24 @@ impl Into<crate::model::album::AlbumForUpdate> for AlbumForUpdate {
             name: self.name,
             description: self.description,
             picture: self.picture.map(|id| id.0),
-            is_public: self.is_public,
-            updated_at: chrono::Utc::now().naive_utc(),
+            public_lvl: self.public_lvl,
+            updated_at: chrono::Utc::now(),
         }
     }
 }
 
 #[derive(Debug, Clone, Deserialize, InputObject)]
-pub struct AlbumImageForCreate {
+pub struct AlbumPostForCreate {
     pub album_id: Id,
-    pub image_id: Id,
+    pub post_id: Id,
 }
 
-impl Into<crate::model::album::AlbumImageForCreate> for AlbumImageForCreate {
-    fn into(self) -> crate::model::album::AlbumImageForCreate {
-        crate::model::album::AlbumImageForCreate {
+impl Into<crate::model::album::AlbumPostForCreate> for AlbumPostForCreate {
+    fn into(self) -> crate::model::album::AlbumPostForCreate {
+        crate::model::album::AlbumPostForCreate {
             id: Uuid::new_v4(),
             album_id: self.album_id.into(),
-            image_id: self.image_id.into(),
+            post_id: self.post_id.into(),
         }
     }
 }

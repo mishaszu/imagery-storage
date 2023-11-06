@@ -4,17 +4,17 @@ CREATE TABLE album (
     name VARCHAR(255) NOT NULL,
     description VARCHAR(255) NOT NULL,
     picture UUID,
-    is_public BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP NOT NULL,
+    public_lvl INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
     FOREIGN KEY (user_id) REFERENCES account (id) ON DELETE CASCADE,
     FOREIGN KEY (picture) REFERENCES image (id) ON DELETE NO ACTION
 );
 
-CREATE TABLE album_image (
+CREATE TABLE album_post (
   id UUID PRIMARY KEY,
   album_id UUID NOT NULL,
-  image_id UUID NOT NULL,
+  post_id UUID NOT NULL,
   FOREIGN KEY (album_id) REFERENCES album (id) ON DELETE CASCADE,
-  FOREIGN KEY (image_id) REFERENCES image (id) ON DELETE CASCADE
+  FOREIGN KEY (post_id) REFERENCES post (id) ON DELETE CASCADE
 );

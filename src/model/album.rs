@@ -1,12 +1,9 @@
 use diesel::prelude::*;
 use uuid::Uuid;
 
-use super::{
-    image::{Image, ImageForCreate},
-    ModelManager, Result,
-};
+use super::{post::Post, ModelManager, Result};
 
-use crate::schema::{album, album_image, image};
+use crate::schema::{album, album_post, post};
 
 #[derive(Debug, Clone, PartialEq, Identifiable, Queryable)]
 #[diesel(table_name = album)]
@@ -16,9 +13,9 @@ pub struct Album {
     pub name: String,
     pub description: String,
     pub picture: Option<Uuid>,
-    pub is_public: bool,
-    pub created_at: chrono::NaiveDateTime,
-    pub updated_at: chrono::NaiveDateTime,
+    pub public_lvl: i32,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(Insertable)]
@@ -35,24 +32,24 @@ pub struct AlbumForUpdate {
     pub name: Option<String>,
     pub description: Option<String>,
     pub picture: Option<Uuid>,
-    pub is_public: Option<bool>,
-    pub updated_at: chrono::NaiveDateTime,
+    pub public_lvl: Option<i32>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(Debug, Clone, PartialEq, Identifiable, Queryable)]
-#[diesel(table_name = album_image)]
-pub struct AlbumImage {
+#[diesel(table_name = album_post)]
+pub struct AlbumPost {
     pub id: Uuid,
     pub album_id: Uuid,
-    pub image_id: Uuid,
+    pub post_id: Uuid,
 }
 
 #[derive(Debug, Clone, Insertable)]
-#[diesel(table_name = album_image)]
-pub struct AlbumImageForCreate {
+#[diesel(table_name = album_post)]
+pub struct AlbumPostForCreate {
     pub id: Uuid,
     pub album_id: Uuid,
-    pub image_id: Uuid,
+    pub post_id: Uuid,
 }
 
 pub struct AlbumBmc;
@@ -101,81 +98,31 @@ impl AlbumBmc {
             .map_err(|e| e.into())
     }
 
-    pub fn create_album_image(mm: &ModelManager, input: AlbumImageForCreate) -> Result<AlbumImage> {
+    pub fn create_album_post(mm: &ModelManager, input: AlbumPostForCreate) -> Result<AlbumPost> {
         let mut connection = mm.conn()?;
 
-        diesel::insert_into(album_image::dsl::album_image)
+        diesel::insert_into(album_post::dsl::album_post)
             .values(input)
-            .get_result::<AlbumImage>(&mut connection)
+            .get_result::<AlbumPost>(&mut connection)
             .map_err(|e| e.into())
     }
 
-    pub fn get_images(mm: &ModelManager, id: Uuid) -> Result<Vec<Image>> {
+    pub fn delete_album_post(mm: &ModelManager, post_id: &Uuid) -> Result<usize> {
         let mut connection = mm.conn()?;
 
-        album_image::dsl::album_image
-            .filter(album_image::dsl::album_id.eq(id))
-            .inner_join(image::dsl::image)
-            .select(image::all_columns)
-            .load::<Image>(&mut connection)
+        diesel::delete(album_post::dsl::album_post.filter(album_post::dsl::post_id.eq(post_id)))
+            .execute(&mut connection)
             .map_err(|e| e.into())
     }
 
-    pub fn create_with_images(
-        mm: &ModelManager,
-        album: AlbumForCreate,
-        images: Vec<ImageForCreate>,
-    ) -> Result<Album> {
+    pub fn get_posts(mm: &ModelManager, id: Uuid) -> Result<Vec<Post>> {
         let mut connection = mm.conn()?;
 
-        let album_images: Vec<AlbumImageForCreate> = images
-            .iter()
-            .map(|i| AlbumImageForCreate {
-                id: Uuid::new_v4(),
-                album_id: album.id,
-                image_id: i.id,
-            })
-            .collect();
-
-        connection
-            .transaction(|connection| {
-                let album = diesel::insert_into(album::dsl::album)
-                    .values(album)
-                    .get_result::<Album>(connection)?;
-
-                diesel::insert_into(image::dsl::image)
-                    .values(images)
-                    .execute(connection)?;
-
-                diesel::insert_into(album_image::dsl::album_image)
-                    .values(album_images)
-                    .execute(connection)?;
-
-                diesel::QueryResult::Ok(album)
-            })
-            .map_err(|e| e.into())
-    }
-
-    pub fn delete_with_images(mm: &ModelManager, id: Uuid) -> Result<()> {
-        let mut connection = mm.conn()?;
-
-        connection
-            .transaction(|connection| {
-                let images: Vec<Uuid> = album_image::dsl::album_image
-                    .filter(album_image::dsl::album_id.eq(id))
-                    .select(album_image::dsl::image_id)
-                    .load::<Uuid>(connection)?;
-
-                diesel::delete(album::dsl::album.filter(album::dsl::id.eq(id)))
-                    .get_result::<Album>(connection)?;
-
-                for image in images {
-                    diesel::delete(image::dsl::image.filter(image::dsl::id.eq(image)))
-                        .execute(connection)?;
-                }
-
-                diesel::QueryResult::Ok(())
-            })
+        album_post::dsl::album_post
+            .filter(album_post::dsl::album_id.eq(id))
+            .inner_join(post::dsl::post)
+            .select(post::all_columns)
+            .load::<Post>(&mut connection)
             .map_err(|e| e.into())
     }
 }

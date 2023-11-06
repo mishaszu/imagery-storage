@@ -9,6 +9,7 @@ pub mod error;
 pub mod favorite_image;
 pub mod follow;
 pub mod image;
+pub mod post;
 mod store;
 pub mod sys_config;
 pub mod tag;

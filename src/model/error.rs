@@ -35,7 +35,7 @@ impl From<store::Error> for Error {
 
 impl From<diesel::result::Error> for Error {
     fn from(e: DieselError) -> Self {
-        debug!("Diesel error: {:?}", e);
+        debug!("{:<12}Diesel error: {:?}", "MODEL ERROR", e);
         match e {
             DieselError::NotFound => Error::DbEntityNotFound,
             DieselError::DatabaseError(kind, _) => match kind {

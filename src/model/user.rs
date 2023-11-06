@@ -20,10 +20,9 @@ pub struct User {
     hash: String,
     access_key: Option<String>,
     picture: Option<String>,
-    is_public: bool,
     pub account_id: Uuid,
-    created_at: chrono::NaiveDateTime,
-    updated_at: chrono::NaiveDateTime,
+    created_at: chrono::DateTime<chrono::Utc>,
+    updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(Insertable)]
@@ -43,7 +42,7 @@ pub struct UserForUpdate {
     hash: Option<String>,
     access_key: Option<String>,
     picture: Option<String>,
-    is_public: Option<bool>,
+    updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 pub struct UserBmc {}

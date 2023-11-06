@@ -10,9 +10,9 @@ use crate::schema::fav;
 pub struct Fav {
     id: Uuid,
     user_id: Uuid,
-    image_id: Uuid,
-    created_at: chrono::NaiveDateTime,
-    updated_at: chrono::NaiveDateTime,
+    post_id: Uuid,
+    created_at: chrono::DateTime<chrono::Utc>,
+    updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(Debug, Clone, Insertable)]
@@ -20,7 +20,7 @@ pub struct Fav {
 pub struct FavForCreate {
     pub id: Uuid,
     user_id: Uuid,
-    image_id: Uuid,
+    post_id: Uuid,
 }
 
 pub struct FavBmc;

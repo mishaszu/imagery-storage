@@ -23,6 +23,7 @@ async fn login_handler(
 ) -> Result<Json<Value>> {
     let user = UserBmc::get_by_email(&mm, &payload.email)?;
     let is_valid = user.validate_pwd(&payload.password);
+    println!("is_valid: {:?}", is_valid);
     match is_valid {
         Ok(_) => {
             let token = user.into_token()?;

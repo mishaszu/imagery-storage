@@ -9,39 +9,39 @@ use super::{ModelManager, Result};
 #[diesel(table_name = account)]
 pub struct Account {
     pub id: Uuid,
-    referral_id: Option<Uuid>,
-    email: String,
+    pub referral_id: Option<Uuid>,
+    pub email: String,
     pub kind: String,
-    is_admin: bool,
-    is_public: bool,
-    is_active: bool,
-    is_banned: bool,
-    created_at: chrono::NaiveDateTime,
-    updated_at: chrono::NaiveDateTime,
+    pub followee_id: Option<Uuid>,
+    pub is_admin: bool,
+    pub public_lvl: i32,
+    pub is_banned: bool,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(Insertable)]
 #[diesel(table_name = account)]
 pub struct AccountForCreate {
-    id: Uuid,
-    referral_id: Option<Uuid>,
-    email: String,
-    kind: Option<String>,
-    is_public: bool,
-    is_active: bool,
+    pub id: Uuid,
+    pub referral_id: Option<Uuid>,
+    pub email: String,
+    pub kind: Option<String>,
+    pub followee_id: Option<Uuid>,
+    pub public_lvl: Option<i32>,
 }
 
 #[derive(AsChangeset, Insertable, Default)]
 #[diesel(table_name = account)]
 pub struct AccountForUpdate {
-    referral_id: Option<Uuid>,
-    email: Option<String>,
-    kind: Option<String>,
-    is_admin: Option<bool>,
-    is_public: Option<bool>,
-    is_active: Option<bool>,
-    is_banned: Option<bool>,
-    updated_at: chrono::NaiveDateTime,
+    pub referral_id: Option<Uuid>,
+    pub email: Option<String>,
+    pub kind: Option<String>,
+    pub followee_id: Option<Uuid>,
+    pub is_admin: Option<bool>,
+    pub public_lvl: Option<i32>,
+    pub is_banned: Option<bool>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 pub struct AccountBmc;

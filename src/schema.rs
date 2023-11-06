@@ -8,12 +8,12 @@ diesel::table! {
         email -> Varchar,
         #[max_length = 255]
         kind -> Varchar,
+        followee_id -> Nullable<Uuid>,
         is_admin -> Bool,
-        is_public -> Bool,
-        is_active -> Bool,
+        public_lvl -> Int4,
         is_banned -> Bool,
-        created_at -> Timestamp,
-        updated_at -> Timestamp,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
     }
 }
 
@@ -26,17 +26,17 @@ diesel::table! {
         #[max_length = 255]
         description -> Varchar,
         picture -> Nullable<Uuid>,
-        is_public -> Bool,
-        created_at -> Timestamp,
-        updated_at -> Timestamp,
+        public_lvl -> Int4,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
     }
 }
 
 diesel::table! {
-    album_image (id) {
+    album_post (id) {
         id -> Uuid,
         album_id -> Uuid,
-        image_id -> Uuid,
+        post_id -> Uuid,
     }
 }
 
@@ -44,10 +44,10 @@ diesel::table! {
     comment (id) {
         id -> Uuid,
         user_id -> Uuid,
-        image_id -> Uuid,
+        post_id -> Uuid,
         body -> Text,
-        created_at -> Timestamp,
-        updated_at -> Timestamp,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
     }
 }
 
@@ -55,9 +55,9 @@ diesel::table! {
     fav (id) {
         id -> Uuid,
         user_id -> Uuid,
-        image_id -> Uuid,
-        created_at -> Timestamp,
-        updated_at -> Timestamp,
+        post_id -> Uuid,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
     }
 }
 
@@ -66,8 +66,8 @@ diesel::table! {
         id -> Uuid,
         follower_id -> Uuid,
         followee_id -> Uuid,
-        created_at -> Timestamp,
-        updated_at -> Timestamp,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
     }
 }
 
@@ -76,18 +76,37 @@ diesel::table! {
         id -> Uuid,
         user_id -> Uuid,
         name -> Nullable<Text>,
-        description -> Nullable<Text>,
         path -> Uuid,
-        is_public -> Bool,
-        created_at -> Timestamp,
-        updated_at -> Timestamp,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
     }
 }
 
 diesel::table! {
-    image_tag (id) {
+    post (id) {
         id -> Uuid,
+        #[max_length = 255]
+        title -> Varchar,
+        body -> Text,
+        user_id -> Uuid,
+        public_lvl -> Int4,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    post_image (id) {
+        id -> Uuid,
+        post_id -> Uuid,
         image_id -> Uuid,
+    }
+}
+
+diesel::table! {
+    post_tag (id) {
+        id -> Uuid,
+        post_id -> Uuid,
         tag_id -> Uuid,
     }
 }
@@ -104,8 +123,8 @@ diesel::table! {
         id -> Uuid,
         #[max_length = 255]
         name -> Varchar,
-        created_at -> Timestamp,
-        updated_at -> Timestamp,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
     }
 }
 
@@ -117,8 +136,9 @@ diesel::table! {
         #[max_length = 255]
         color -> Varchar,
         picture -> Nullable<Uuid>,
-        created_at -> Timestamp,
-        updated_at -> Timestamp,
+        user_id -> Uuid,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
     }
 }
 
@@ -135,36 +155,41 @@ diesel::table! {
         access_key -> Nullable<Varchar>,
         #[max_length = 255]
         picture -> Nullable<Varchar>,
-        is_public -> Bool,
         account_id -> Uuid,
-        created_at -> Timestamp,
-        updated_at -> Timestamp,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
     }
 }
 
 diesel::joinable!(album -> account (user_id));
 diesel::joinable!(album -> image (picture));
-diesel::joinable!(album_image -> album (album_id));
-diesel::joinable!(album_image -> image (image_id));
-diesel::joinable!(comment -> image (image_id));
+diesel::joinable!(album_post -> album (album_id));
+diesel::joinable!(album_post -> post (post_id));
+diesel::joinable!(comment -> post (post_id));
 diesel::joinable!(comment -> users (user_id));
-diesel::joinable!(fav -> image (image_id));
+diesel::joinable!(fav -> post (post_id));
 diesel::joinable!(fav -> users (user_id));
 diesel::joinable!(image -> users (user_id));
-diesel::joinable!(image_tag -> image (image_id));
-diesel::joinable!(image_tag -> tag (tag_id));
+diesel::joinable!(post -> users (user_id));
+diesel::joinable!(post_image -> image (image_id));
+diesel::joinable!(post_image -> post (post_id));
+diesel::joinable!(post_tag -> post (post_id));
+diesel::joinable!(post_tag -> tag (tag_id));
+diesel::joinable!(theme -> account (user_id));
 diesel::joinable!(theme -> image (picture));
 diesel::joinable!(users -> account (account_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     account,
     album,
-    album_image,
+    album_post,
     comment,
     fav,
     follow,
     image,
-    image_tag,
+    post,
+    post_image,
+    post_tag,
     sys_config,
     tag,
     theme,

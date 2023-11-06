@@ -1,5 +1,5 @@
-# wooboo-v3-be
-WooBoo server
+# Imagery Storage
+Imagery Storage
 
 ## Tech Stack:
 - Axum
@@ -8,6 +8,6 @@ WooBoo server
 - request
 
 ## Design:
-user -> wooboo -> lust
-User makes a request to WooBoo, if requesting an image wooboo fetches it from Lust and sends it back to the user.
+user -> imagery -> lust
+User makes a request to imagery, if requesting an image, imagery fetches it from Lust and sends it back to the user.
 

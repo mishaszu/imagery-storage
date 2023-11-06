@@ -17,8 +17,9 @@ pub struct Theme {
     name: String,
     color: String,
     picture: Option<Uuid>,
-    created_at: chrono::NaiveDateTime,
-    updated_at: chrono::NaiveDateTime,
+    user_id: Uuid,
+    created_at: chrono::DateTime<chrono::Utc>,
+    updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(Insertable)]
@@ -28,6 +29,7 @@ pub struct ThemeForCreate {
     name: String,
     color: String,
     picture: Option<Uuid>,
+    user_id: Uuid,
 }
 
 #[derive(AsChangeset, Insertable)]
@@ -36,7 +38,7 @@ pub struct ThemeForUpdate {
     name: Option<String>,
     color: Option<String>,
     picture: Option<Uuid>,
-    updated_at: chrono::NaiveDateTime,
+    updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 pub struct ThemeBmc;

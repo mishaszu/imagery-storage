@@ -2,15 +2,18 @@ use async_graphql::{ComplexObject, InputObject, SimpleObject};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{graphql::scalars::Id, model::tag::TagBmc};
+use crate::{
+    graphql::scalars::{DateTime, Id},
+    model::tag::TagBmc,
+};
 
 #[derive(Debug, Clone, Serialize, SimpleObject)]
 #[graphql(complex)]
 pub struct Tag {
     id: Id,
     name: String,
-    created_at: String,
-    updated_at: String,
+    created_at: DateTime,
+    updated_at: DateTime,
 }
 
 #[ComplexObject]
@@ -34,8 +37,8 @@ impl From<crate::model::tag::Tag> for Tag {
         Tag {
             id: tag.id.into(),
             name: tag.name,
-            created_at: tag.created_at.to_string(),
-            updated_at: tag.updated_at.to_string(),
+            created_at: tag.created_at.into(),
+            updated_at: tag.updated_at.into(),
         }
     }
 }
@@ -64,7 +67,7 @@ impl Into<crate::model::tag::TagForUpdate> for TagForUpdate {
     fn into(self: Self) -> crate::model::tag::TagForUpdate {
         crate::model::tag::TagForUpdate {
             name: self.name,
-            updated_at: chrono::Local::now().naive_local(),
+            updated_at: chrono::Utc::now(),
         }
     }
 }

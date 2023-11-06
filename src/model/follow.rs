@@ -11,8 +11,8 @@ pub struct Follow {
     id: Uuid,
     follower_id: Uuid,
     followee_id: Uuid,
-    created_at: chrono::NaiveDateTime,
-    updated_at: chrono::NaiveDateTime,
+    created_at: chrono::DateTime<chrono::Utc>,
+    updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(Debug, Clone, Insertable)]

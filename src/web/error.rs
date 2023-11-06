@@ -1,3 +1,4 @@
+use crate::web::middleware::CtxExtError;
 use crate::{crypt, model, web};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
@@ -78,6 +79,7 @@ impl IntoResponse for Error {
             Error::LustBadStatus(status) if status == 400 => {
                 StatusCode::BAD_REQUEST.into_response()
             }
+            Error::CtxExt(_) => StatusCode::UNAUTHORIZED.into_response(),
             _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         };
 
@@ -94,49 +96,3 @@ impl core::fmt::Display for Error {
         write!(fmt, "{self:?}")
     }
 }
-
-impl std::error::Error for Error {}
-// endregion: --- Error Boilerplate
-
-// region:    --- Client Error
-
-// impl Error {
-//     pub fn client_status_and_error(&self) -> (StatusCode, ClientError) {
-//         use web::Error::*;
-
-//         #[allow(unreachable_patterns)]
-//         match self {
-//             // -- Login
-//             LoginFailUsernameNotFound
-//             | LoginFailUserHasNoPwd { .. }
-//             | LoginFailPwdNotMatching { .. } => (StatusCode::FORBIDDEN, ClientError::LOGIN_FAIL),
-
-//             // -- Auth
-//             CtxExt(_) => (StatusCode::FORBIDDEN, ClientError::NO_AUTH),
-
-//             // -- Model
-//             Model(model::Error::EntityNotFound { entity, id }) => (
-//                 StatusCode::BAD_REQUEST,
-//                 ClientError::ENTITY_NOT_FOUND { entity, id: *id },
-//             ),
-
-//             // -- Fallback.
-//             _ => (
-//                 StatusCode::INTERNAL_SERVER_ERROR,
-//                 ClientError::SERVICE_ERROR,
-//             ),
-//         }
-//     }
-// }
-
-// #[derive(Debug, Serialize, strum_macros::AsRefStr)]
-// #[serde(tag = "message", content = "detail")]
-// #[allow(non_camel_case_types)]
-// pub enum ClientError {
-//     LOGIN_FAIL,
-//     NO_AUTH,
-//     ENTITY_NOT_FOUND { entity: &'static str, id: Uuid },
-
-//     SERVICE_ERROR,
-// }
-// // endregion: --- Client Error

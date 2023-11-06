@@ -54,5 +54,5 @@ async fn main() -> Result<()> {
 
 async fn hello_world() -> &'static str {
     info!("{:<12} - test route", "GET");
-    "Hello world from WooBoo V3!"
+    "Hello world from imagery storage!"
 }

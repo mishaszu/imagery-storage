@@ -4,7 +4,7 @@ use crate::model::album::AlbumBmc;
 use crate::web::graphql::error::Error as GraphQLError;
 use crate::{graphql::scalars::Id, model::ModelManager};
 
-use super::model::{Album, AlbumForCreate, AlbumForUpdate, AlbumImageForCreate};
+use super::model::{Album, AlbumForCreate, AlbumForUpdate, AlbumPostForCreate};
 
 #[derive(Default)]
 pub struct AlbumMutation;
@@ -72,20 +72,20 @@ impl AlbumMutation {
     //     Ok(album.into())
     // }
 
-    pub async fn delete_album_with_images(&self, ctx: &Context<'_>, id: Id) -> Result<String> {
-        let mm = ctx.data_opt::<ModelManager>();
-        let mm = match mm {
-            Some(mm) => mm,
-            None => return Err(GraphQLError::ModalManagerNotInContext.into()),
-        };
-        AlbumBmc::delete_with_images(mm, id.into()).map_err(GraphQLError::from_model_to_graphql)?;
-        Ok("Album deleted".to_string())
-    }
+    // pub async fn delete_album_with_images(&self, ctx: &Context<'_>, id: Id) -> Result<String> {
+    //     let mm = ctx.data_opt::<ModelManager>();
+    //     let mm = match mm {
+    //         Some(mm) => mm,
+    //         None => return Err(GraphQLError::ModalManagerNotInContext.into()),
+    //     };
+    //     AlbumBmc::delete_with_images(mm, id.into()).map_err(GraphQLError::from_model_to_graphql)?;
+    //     Ok("Album deleted".to_string())
+    // }
 
     pub async fn add_album_image(
         &self,
         ctx: &Context<'_>,
-        input: AlbumImageForCreate,
+        input: AlbumPostForCreate,
     ) -> Result<String> {
         let mm = ctx.data_opt::<ModelManager>();
         let mm = match mm {
@@ -93,7 +93,7 @@ impl AlbumMutation {
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
 
-        AlbumBmc::create_album_image(mm, input.into())
+        AlbumBmc::create_album_post(mm, input.into())
             .map_err(GraphQLError::from_model_to_graphql)?;
         Ok("Album image added".to_string())
     }

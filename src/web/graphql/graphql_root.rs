@@ -1,7 +1,10 @@
 use async_graphql::{Context, EmptySubscription, MergedObject, Schema};
 use reqwest::Client;
 
-use super::error::Error;
+use super::{
+    account::{AccountMutation, AccountQuery},
+    error::Error,
+};
 use crate::{ctx::Ctx, model::ModelManager};
 
 use super::{
@@ -35,14 +38,20 @@ impl DefaultMutation {
 }
 
 #[derive(MergedObject, Default)]
-pub struct QueryRoot(DefaultQuery, TagQuery, ImageQuery, AlbumQuery);
+pub struct QueryRoot(DefaultQuery, AccountQuery, TagQuery, ImageQuery, AlbumQuery);
 
 #[derive(MergedObject, Default)]
-pub struct MutationRoot(DefaultMutation, TagMutation, ImageMutation, AlbumMutation);
+pub struct MutationRoot(
+    DefaultMutation,
+    AccountMutation,
+    TagMutation,
+    ImageMutation,
+    AlbumMutation,
+);
 
-pub type WooBooSchema = Schema<QueryRoot, MutationRoot, EmptySubscription>;
+pub type ImagerySchema = Schema<QueryRoot, MutationRoot, EmptySubscription>;
 
-pub fn create_schema(mm: ModelManager, req_client: Client) -> WooBooSchema {
+pub fn create_schema(mm: ModelManager, req_client: Client) -> ImagerySchema {
     Schema::build(
         QueryRoot::default(),
         MutationRoot::default(),

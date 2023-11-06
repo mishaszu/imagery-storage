@@ -1,7 +1,10 @@
 use async_graphql::{ComplexObject, InputObject, SimpleObject};
 use serde::{Deserialize, Serialize};
 
-use crate::{graphql::scalars::Id, model::image::ImageBmc};
+use crate::{
+    graphql::scalars::{DateTime, Id},
+    model::image::ImageBmc,
+};
 
 #[derive(Debug, Clone, Serialize, SimpleObject)]
 #[graphql(complex)]
@@ -9,11 +12,9 @@ pub struct Image {
     pub id: Id,
     pub user_id: Id,
     pub name: Option<String>,
-    pub description: Option<String>,
     pub path: Id,
-    pub is_public: bool,
-    pub created_at: String,
-    pub updated_at: String,
+    pub created_at: DateTime,
+    pub updated_at: DateTime,
 }
 
 #[ComplexObject]
@@ -57,11 +58,9 @@ impl From<crate::model::image::Image> for Image {
             id: Id(image.id),
             user_id: Id(image.user_id),
             name: image.name,
-            description: image.description,
             path: Id(image.path),
-            is_public: image.is_public,
-            created_at: image.created_at.to_string(),
-            updated_at: image.updated_at.to_string(),
+            created_at: image.created_at.into(),
+            updated_at: image.updated_at.into(),
         }
     }
 }
@@ -71,7 +70,6 @@ pub struct ImageForCreate {
     pub path: String,
     pub user_id: Id,
     pub name: Option<String>,
-    pub description: Option<String>,
 }
 
 impl Into<crate::model::image::ImageForCreate> for ImageForCreate {
@@ -80,7 +78,6 @@ impl Into<crate::model::image::ImageForCreate> for ImageForCreate {
             id: uuid::Uuid::new_v4(),
             user_id: self.user_id.into(),
             name: self.name,
-            description: self.description,
             path: self.path.parse().unwrap(),
         }
     }
@@ -89,18 +86,15 @@ impl Into<crate::model::image::ImageForCreate> for ImageForCreate {
 #[derive(Debug, Clone, Deserialize, InputObject)]
 pub struct ImageForUpdate {
     pub name: Option<String>,
-    pub description: Option<String>,
     pub path: Option<Id>,
-    pub updated_at: String,
 }
 
 impl Into<crate::model::image::ImageForUpdate> for ImageForUpdate {
     fn into(self) -> crate::model::image::ImageForUpdate {
         crate::model::image::ImageForUpdate {
             name: self.name,
-            description: self.description,
             path: self.path.map(|id| id.0),
-            updated_at: self.updated_at.parse().unwrap(),
+            updated_at: chrono::Utc::now(),
         }
     }
 }

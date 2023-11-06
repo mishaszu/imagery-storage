@@ -1,2 +1,2 @@
-DROP TABLE IF EXISTS album_image;
+DROP TABLE IF EXISTS album_post;
 DROP TABLE IF EXISTS album;
