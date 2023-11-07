@@ -32,6 +32,8 @@ pub enum Error {
 
     BadUuidFormat,
     // EntityNotFound,
+    //
+    AuthError,
 }
 
 // region:    --- Froms

@@ -2,8 +2,12 @@ use async_graphql::{Context, Object, Result};
 
 use crate::graphql::guard::{Role, RoleGuard};
 use crate::model::account::AccountBmc;
+use crate::model::referral;
 use crate::web::graphql::error::Error as GraphQLError;
-use crate::{graphql::scalars::Id, model::ModelManager};
+use crate::{
+    graphql::scalars::{DateTime, Id},
+    model::ModelManager,
+};
 
 use super::model::{Account, AccountForCreate, AccountForUpdate};
 
@@ -21,6 +25,24 @@ impl AccountMutation {
         };
         let account =
             AccountBmc::create(mm, input.into()).map_err(GraphQLError::from_model_to_graphql)?;
+        Ok(account.into())
+    }
+
+    #[graphql(guard = "RoleGuard::new(Role::Admin)")]
+    async fn create_account_with_referral(
+        &self,
+        ctx: &Context<'_>,
+        referrer_id: Id,
+        input: AccountForCreate,
+    ) -> Result<Account> {
+        let mm = ctx.data_opt::<ModelManager>();
+        let mm = match mm {
+            Some(mm) => mm,
+            None => return Err(GraphQLError::ModalManagerNotInContext.into()),
+        };
+
+        let account = AccountBmc::create_with_referral(mm, &referrer_id.into(), None, input.into())
+            .map_err(GraphQLError::from_model_to_graphql)?;
         Ok(account.into())
     }
 
@@ -50,5 +72,28 @@ impl AccountMutation {
         };
         AccountBmc::delete(mm, &id.into()).map_err(GraphQLError::from_model_to_graphql)?;
         Ok("Account deleted".to_string())
+    }
+
+    #[graphql(guard = "RoleGuard::new(Role::Admin)")]
+    async fn add_referral(
+        &self,
+        ctx: &Context<'_>,
+        referrer_id: Id,
+        user_id: Id,
+        exp: Option<DateTime>,
+    ) -> Result<String> {
+        let mm = ctx.data_opt::<ModelManager>();
+        let mm = match mm {
+            Some(mm) => mm,
+            None => return Err(GraphQLError::ModalManagerNotInContext.into()),
+        };
+        AccountBmc::add_referral(
+            mm,
+            &referrer_id.into(),
+            &user_id.into(),
+            exp.map(|x| x.into()),
+        )
+        .map_err(GraphQLError::from_model_to_graphql)?;
+        Ok("Referral added".to_string())
     }
 }

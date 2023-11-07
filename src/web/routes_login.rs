@@ -5,6 +5,7 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use tower_cookies::Cookies;
 
+use crate::model::account::AccountBmc;
 use crate::model::{user::UserBmc, ModelManager};
 
 use super::{remove_token_cookie, set_token_cookie, Error, Result};
@@ -23,12 +24,17 @@ async fn login_handler(
 ) -> Result<Json<Value>> {
     let user = UserBmc::get_by_email(&mm, &payload.email)?;
     let is_valid = user.validate_pwd(&payload.password);
-    println!("is_valid: {:?}", is_valid);
     match is_valid {
         Ok(_) => {
-            let token = user.into_token()?;
-            set_token_cookie(&cookies, token);
-            Ok(Json(json!({ "success": true })))
+            let account = AccountBmc::get(&mm, &user.account_id)?;
+            match account.is_banned {
+                true => return Err(Error::AuthError),
+                false => {
+                    let token = user.into_token()?;
+                    set_token_cookie(&cookies, token);
+                    Ok(Json(json!({ "success": true })))
+                }
+            }
         }
         Err(_) => Err(Error::LoginFailPwdNotMatching {
             user_id: payload.email,

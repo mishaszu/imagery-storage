@@ -3,12 +3,12 @@
 diesel::table! {
     account (id) {
         id -> Uuid,
-        referral_id -> Nullable<Uuid>,
+        #[max_length = 255]
+        fullname -> Varchar,
         #[max_length = 255]
         email -> Varchar,
         #[max_length = 255]
         kind -> Varchar,
-        followee_id -> Nullable<Uuid>,
         is_admin -> Bool,
         public_lvl -> Int4,
         is_banned -> Bool,
@@ -62,16 +62,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    follow (id) {
-        id -> Uuid,
-        follower_id -> Uuid,
-        followee_id -> Uuid,
-        created_at -> Timestamptz,
-        updated_at -> Timestamptz,
-    }
-}
-
-diesel::table! {
     image (id) {
         id -> Uuid,
         user_id -> Uuid,
@@ -112,6 +102,17 @@ diesel::table! {
 }
 
 diesel::table! {
+    referral (id) {
+        id -> Uuid,
+        referrer_id -> Uuid,
+        user_id -> Uuid,
+        expires_at -> Nullable<Timestamptz>,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     sys_config (id) {
         id -> Uuid,
         allow_registration -> Bool,
@@ -129,14 +130,10 @@ diesel::table! {
 }
 
 diesel::table! {
-    theme (id) {
+    user_picture (id) {
         id -> Uuid,
-        #[max_length = 255]
-        name -> Varchar,
-        #[max_length = 255]
-        color -> Varchar,
-        picture -> Nullable<Uuid>,
         user_id -> Uuid,
+        image_id -> Uuid,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
     }
@@ -151,10 +148,6 @@ diesel::table! {
         nick -> Varchar,
         #[max_length = 255]
         hash -> Varchar,
-        #[max_length = 255]
-        access_key -> Nullable<Varchar>,
-        #[max_length = 255]
-        picture -> Nullable<Varchar>,
         account_id -> Uuid,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
@@ -175,8 +168,8 @@ diesel::joinable!(post_image -> image (image_id));
 diesel::joinable!(post_image -> post (post_id));
 diesel::joinable!(post_tag -> post (post_id));
 diesel::joinable!(post_tag -> tag (tag_id));
-diesel::joinable!(theme -> account (user_id));
-diesel::joinable!(theme -> image (picture));
+diesel::joinable!(user_picture -> image (image_id));
+diesel::joinable!(user_picture -> users (user_id));
 diesel::joinable!(users -> account (account_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
@@ -185,13 +178,13 @@ diesel::allow_tables_to_appear_in_same_query!(
     album_post,
     comment,
     fav,
-    follow,
     image,
     post,
     post_image,
     post_tag,
+    referral,
     sys_config,
     tag,
-    theme,
+    user_picture,
     users,
 );

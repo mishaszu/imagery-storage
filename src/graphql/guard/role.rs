@@ -1,5 +1,5 @@
 use async_graphql::{
-    Context, Error, Guard, InputValueError, InputValueResult, Result, Scalar, ScalarType,
+    Context, Enum, Error, Guard, InputValueError, InputValueResult, Result, Scalar, ScalarType,
 };
 use serde::{Deserialize, Serialize};
 
@@ -8,7 +8,7 @@ use crate::{
     model::{account::AccountBmc, ModelManager},
 };
 
-#[derive(Eq, PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Eq, PartialEq, Debug, Clone, Copy, Serialize, Deserialize, Enum)]
 pub enum Role {
     Admin,
     Creator,
@@ -62,35 +62,6 @@ impl Guard for RoleGuard {
             ("guest", Role::Guest) => Ok(()),
             _ => Err("Unauthorized 1".into()),
         }
-    }
-}
-
-#[Scalar]
-impl ScalarType for Role {
-    fn parse(value: async_graphql::Value) -> InputValueResult<Self> {
-        match value {
-            async_graphql::Value::String(s) => match s.as_str() {
-                "admin" => Ok(Role::Admin),
-                "creator" => Ok(Role::Creator),
-                "commenter" => Ok(Role::Commenter),
-                "guest" => Ok(Role::Guest),
-                _ => Err(InputValueError::custom("Invalid role")),
-            },
-            _ => Err(InputValueError::custom("Invalid role")),
-        }
-    }
-
-    fn to_value(&self) -> async_graphql::Value {
-        async_graphql::Value::String(
-            match self {
-                Role::Admin => "admin",
-                Role::Creator => "creator",
-                Role::Commenter => "commenter",
-                Role::Guest => "guest",
-                Role::None => "none",
-            }
-            .to_string(),
-        )
     }
 }
 

@@ -5,6 +5,7 @@ pub mod graphql_handler;
 pub mod graphql_root;
 pub mod image;
 pub mod tag;
+pub mod user;
 
 pub use graphql_handler::graphql_playground;
 pub use graphql_handler::routes;

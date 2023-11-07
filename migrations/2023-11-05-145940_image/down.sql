@@ -1,1 +1,2 @@
+DROP TABLE IF EXISTS user_picture;
 DROP TABLE IF EXISTS image;

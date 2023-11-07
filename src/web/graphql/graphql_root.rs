@@ -4,6 +4,7 @@ use reqwest::Client;
 use super::{
     account::{AccountMutation, AccountQuery},
     error::Error,
+    user::{UserMutation, UserQuery},
 };
 use crate::{ctx::Ctx, model::ModelManager};
 
@@ -38,12 +39,20 @@ impl DefaultMutation {
 }
 
 #[derive(MergedObject, Default)]
-pub struct QueryRoot(DefaultQuery, AccountQuery, TagQuery, ImageQuery, AlbumQuery);
+pub struct QueryRoot(
+    DefaultQuery,
+    AccountQuery,
+    UserQuery,
+    TagQuery,
+    ImageQuery,
+    AlbumQuery,
+);
 
 #[derive(MergedObject, Default)]
 pub struct MutationRoot(
     DefaultMutation,
     AccountMutation,
+    UserMutation,
     TagMutation,
     ImageMutation,
     AlbumMutation,

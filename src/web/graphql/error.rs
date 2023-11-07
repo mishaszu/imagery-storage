@@ -14,6 +14,8 @@ pub enum Error {
     ModelError(ModelError),
 
     AuthError,
+
+    FailedToEncryptPassword,
 }
 
 impl Error {
@@ -38,6 +40,7 @@ impl Into<async_graphql::Error> for Error {
             | Error::ClientNotInContext
             | Error::ModelError(_)
             | Error::FailedToReadFile
+            | Error::FailedToEncryptPassword
             | Error::ModalManagerNotInContext => async_graphql::Error::new("Internal server error"),
         }
     }
