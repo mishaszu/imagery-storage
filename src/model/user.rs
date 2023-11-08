@@ -103,7 +103,7 @@ impl UserBmc {
                         .map_err(|e| e.into())
                 } else {
                     let mut public: Vec<User> = account::dsl::account
-                        .filter(account::dsl::public_lvl.eq(3))
+                        .filter(account::dsl::public_lvl.eq(2))
                         .filter(account::dsl::is_banned.eq(false))
                         .inner_join(
                             users::dsl::users.on(users::dsl::account_id.eq(account::dsl::id)),
@@ -121,7 +121,7 @@ impl UserBmc {
                             account::dsl::account
                                 .on(account::dsl::id.eq(referral::dsl::referrer_id)),
                         )
-                        .filter(account::dsl::public_lvl.ge(2))
+                        .filter(account::dsl::public_lvl.ge(1))
                         .filter(account::dsl::is_banned.eq(false))
                         .inner_join(
                             users::dsl::users.on(users::dsl::account_id.eq(account::dsl::id)),
@@ -137,13 +137,16 @@ impl UserBmc {
                     Ok(public)
                 }
             }
-            None => users::dsl::users
-                .inner_join(account::dsl::account)
-                .filter(account::dsl::public_lvl.eq(3))
-                .filter(account::dsl::is_banned.eq(false))
-                .select(users::all_columns)
-                .load::<User>(&mut connection)
-                .map_err(|e| e.into()),
+            None => {
+                println!("list all public users");
+                users::dsl::users
+                    .inner_join(account::dsl::account)
+                    .filter(account::dsl::public_lvl.eq(2))
+                    .filter(account::dsl::is_banned.eq(false))
+                    .select(users::all_columns)
+                    .load::<User>(&mut connection)
+                    .map_err(|e| e.into())
+            }
         }
     }
 

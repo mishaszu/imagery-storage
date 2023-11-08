@@ -67,23 +67,20 @@ impl Into<chrono::DateTime<chrono::Utc>> for DateTime {
 
 #[derive(Eq, PartialEq, Debug, Clone, Copy, Serialize, Deserialize, Enum)]
 pub enum PublicLvl {
-    // 0: private
-    Hidden,
-    // 1: restricted
+    // 0: restricted
     Private,
-    // 2: followers
+    // 1: followers
     Subscribers,
-    // 3: public
+    // 2: public
     Public,
 }
 
 impl Into<i32> for PublicLvl {
     fn into(self) -> i32 {
         match self {
-            PublicLvl::Hidden => 0,
-            PublicLvl::Private => 1,
-            PublicLvl::Subscribers => 2,
-            PublicLvl::Public => 3,
+            PublicLvl::Private => 0,
+            PublicLvl::Subscribers => 1,
+            PublicLvl::Public => 2,
         }
     }
 }
@@ -91,11 +88,10 @@ impl Into<i32> for PublicLvl {
 impl From<i32> for PublicLvl {
     fn from(i: i32) -> Self {
         match i {
-            0 => PublicLvl::Hidden,
-            1 => PublicLvl::Private,
-            2 => PublicLvl::Subscribers,
-            3 => PublicLvl::Public,
-            _ => PublicLvl::Hidden,
+            0 => PublicLvl::Private,
+            1 => PublicLvl::Subscribers,
+            2 => PublicLvl::Public,
+            _ => PublicLvl::Private,
         }
     }
 }
