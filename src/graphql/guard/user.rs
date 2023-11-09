@@ -10,6 +10,14 @@ use crate::{
     model::{account::AccountBmc, ModelManager},
 };
 
+pub enum Accessship {
+    AllowedPublic,
+    AllowedSubscriber,
+    Admin,
+    Owner,
+    None,
+}
+
 pub struct UserQueryGuard {
     id: Uuid,
 }
@@ -30,20 +38,14 @@ impl Guard for UserQueryGuard {
             None => return Err("Unauthorized".into()),
         };
 
-        // check if user is logged in
-        let (user_id, user_account_id) = match app_ctx {
-            Some(ctx) => (ctx.user_id, ctx.account_id),
-            None => return Err("Unauthorized".into()),
-        };
+        let user_account_id = app_ctx.map(|r| r.account_id);
 
-        let has_access =
-            AccountBmc::has_user_access(mm, &user_id, &user_account_id, &self.id.into())
-                .map_err(|_| -> Error { "Unauthorized".into() })?;
+        let has_access = AccountBmc::has_access(mm, user_account_id, &self.id.into())
+            .map_err(|_| -> Error { "Unauthorized".into() })?;
 
-        if has_access {
-            return Ok(());
-        } else {
-            return Err("Unauthorized".into());
+        match has_access {
+            Accessship::None => Err("Unauthorized".into()),
+            _ => Ok(()),
         }
     }
 }

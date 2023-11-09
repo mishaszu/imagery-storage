@@ -2,7 +2,8 @@ use diesel::prelude::*;
 use uuid::Uuid;
 
 use crate::{
-    model::{referral::Referral, user::User},
+    graphql::guard::Accessship,
+    model::referral::Referral,
     schema::{account, referral, users},
 };
 
@@ -102,34 +103,36 @@ impl AccountBmc {
             .map_err(|e| e.into())
     }
 
-    pub fn has_user_access(
+    pub fn has_access(
         mm: &ModelManager,
-        _user_id: &Uuid,
-        user_account_id: &Uuid,
+        user_account_id: Option<Uuid>,
         target_user_id: &Uuid,
-    ) -> Result<bool> {
+    ) -> Result<Accessship> {
         let mut connection = mm.conn()?;
-
-        let user_account = account::dsl::account
-            .filter(account::dsl::id.eq(user_account_id))
-            .first::<Account>(&mut connection)?;
-
-        if user_account.is_admin {
-            return Ok(true);
-        }
-
-        if user_account.is_banned {
-            return Ok(false);
-        }
 
         let target_account = users::dsl::users
             .filter(users::dsl::id.eq(target_user_id))
             .inner_join(account::dsl::account)
+            .filter(account::dsl::is_banned.eq(false))
             .select(account::all_columns)
             .first::<Account>(&mut connection)?;
 
-        if target_account.is_banned {
-            return Ok(false);
+        if target_account.public_lvl == 2 {
+            return Ok(Accessship::AllowedPublic);
+        }
+
+        let user_account_id = match user_account_id {
+            Some(user_account_id) => user_account_id,
+            None => return Ok(Accessship::None),
+        };
+
+        let user_account = account::dsl::account
+            .filter(account::dsl::id.eq(user_account_id))
+            .filter(account::dsl::is_banned.eq(false))
+            .first::<Account>(&mut connection)?;
+
+        if user_account.id == target_account.id || user_account.is_admin {
+            return Ok(Accessship::Owner);
         }
 
         let has_refferal = referral::dsl::referral
@@ -139,9 +142,8 @@ impl AccountBmc {
             .is_ok();
 
         match (target_account.public_lvl, has_refferal) {
-            (3, _) => Ok(true),
-            (2, true) => Ok(true),
-            _ => Ok(false),
+            (1, true) => Ok(Accessship::AllowedSubscriber),
+            _ => Ok(Accessship::None),
         }
     }
 

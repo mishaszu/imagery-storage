@@ -4,9 +4,11 @@ use diesel::{
 };
 use uuid::Uuid;
 
-use crate::schema::{post, post_image};
+use crate::graphql::guard::Accessship;
+use crate::schema::{account, post, post_image, users};
 
-use super::{ModelManager, Result};
+use super::account::{Account, AccountBmc};
+use super::{Error, ModelManager, Result};
 
 #[derive(Debug, Clone, PartialEq, Identifiable, Queryable)]
 #[diesel(table_name = post)]
@@ -60,6 +62,27 @@ pub struct PostImageForCreate {
 pub struct PostBmc;
 
 impl PostBmc {
+    pub fn get(mm: &ModelManager, post_id: &Uuid) -> Result<Post> {
+        let mut connection = mm.conn()?;
+        let post = post::dsl::post
+            .filter(post::id.eq(post_id))
+            .first::<Post>(&mut connection)?;
+
+        Ok(post)
+    }
+
+    pub fn get_with_account(mm: &ModelManager, post_id: &Uuid) -> Result<(Post, Account)> {
+        let mut connection = mm.conn()?;
+        let post_n_account = post::dsl::post
+            .filter(post::id.eq(post_id))
+            .inner_join(users::dsl::users)
+            .inner_join(account::dsl::account.on(users::account_id.eq(account::id)))
+            .select((post::all_columns, account::all_columns))
+            .first::<(Post, Account)>(&mut connection)?;
+
+        Ok(post_n_account)
+    }
+
     pub fn create(
         mm: &ModelManager,
         post: &PostForCreate,
@@ -104,9 +127,37 @@ impl PostBmc {
         Ok(post)
     }
 
-    pub fn list(mm: &ModelManager) -> Result<Vec<Post>> {
+    pub fn list_admin(mm: &ModelManager) -> Result<Vec<Post>> {
         let mut connection = mm.conn()?;
-        let posts = post::dsl::post.load::<Post>(&mut connection)?;
+        let posts = post::dsl::post
+            .order(post::created_at.desc())
+            .load::<Post>(&mut connection)?;
+
+        Ok(posts)
+    }
+
+    pub fn list(
+        mm: &ModelManager,
+        user_account_id: Option<Uuid>,
+        target_user_id: &Uuid,
+    ) -> Result<Vec<Post>> {
+        let mut connection = mm.conn()?;
+
+        let has_access = AccountBmc::has_access(mm, user_account_id, &target_user_id)?;
+
+        let access_lvl = match has_access {
+            Accessship::Admin => 0,
+            Accessship::AllowedSubscriber => 1,
+            Accessship::AllowedPublic => 2,
+            Accessship::Owner => 0,
+            Accessship::None => return Err(Error::AccessDenied),
+        };
+
+        let posts = post::dsl::post
+            .filter(post::user_id.eq(target_user_id))
+            .filter(post::public_lvl.ge(access_lvl))
+            .order(post::created_at.desc())
+            .load::<Post>(&mut connection)?;
 
         Ok(posts)
     }

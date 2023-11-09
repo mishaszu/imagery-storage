@@ -1,7 +1,7 @@
 use async_graphql::{Context, Object, Result};
 
 use crate::ctx::Ctx;
-use crate::graphql::guard::{Role, RoleGuard};
+use crate::graphql::guard::{Accessship, Role, RoleGuard};
 use crate::model::account::AccountBmc;
 use crate::model::user::UserBmc;
 use crate::web::graphql::error::Error as GraphQLError;
@@ -47,9 +47,11 @@ impl AccountQuery {
         let user1 =
             UserBmc::get(mm, &user_id.into()).map_err(GraphQLError::from_model_to_graphql)?;
 
-        let access =
-            AccountBmc::has_user_access(mm, &user1.id, &user1.account_id, &search_user_id.into())
-                .map_err(GraphQLError::from_model_to_graphql)?;
-        Ok(access)
+        let access = AccountBmc::has_access(mm, Some(user1.account_id), &search_user_id.into())
+            .map_err(GraphQLError::from_model_to_graphql)?;
+        match access {
+            Accessship::None => Ok(false),
+            _ => Ok(true),
+        }
     }
 }
