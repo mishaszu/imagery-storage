@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 use crate::graphql::guard::{Role, RoleGuard};
 use crate::graphql::scalars::{DateTime, Id, PublicLvl};
+use crate::model::account::AccountBmc;
 use crate::model::user::UserBmc;
 use crate::model::ModelManager;
 use crate::web::graphql::error::Error as GraphQLError;
@@ -34,6 +35,17 @@ impl Account {
         let user = UserBmc::get_by_account_id(mm, &self.id.into())
             .map_err(GraphQLError::from_model_to_graphql)?;
         Ok(user.into())
+    }
+
+    pub async fn referrals(&self, ctx: &Context<'_>) -> async_graphql::Result<Vec<Account>> {
+        let mm = ctx.data_opt::<ModelManager>();
+        let mm = match mm {
+            Some(mm) => mm,
+            None => return Err(GraphQLError::ModalManagerNotInContext.into()),
+        };
+        let users = AccountBmc::get_referrals(mm, &self.id.into())
+            .map_err(GraphQLError::from_model_to_graphql)?;
+        Ok(users.into_iter().map(|r| r.into()).collect())
     }
 }
 

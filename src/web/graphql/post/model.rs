@@ -1,7 +1,8 @@
 use async_graphql::{ComplexObject, InputObject, SimpleObject};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
-use crate::graphql::scalars::{DateTime, Id};
+use crate::graphql::scalars::{DateTime, Id, PublicLvl};
 
 #[derive(SimpleObject, Debug, Clone, Serialize)]
 pub struct Post {
@@ -34,18 +35,19 @@ impl From<crate::model::post::Post> for Post {
 pub struct PostForCreate {
     pub title: String,
     pub body: String,
-    pub user_id: Id,
     pub disable_comments: bool,
+    pub public_lvl: PublicLvl,
 }
 
-impl Into<crate::model::post::PostForCreate> for PostForCreate {
-    fn into(self) -> crate::model::post::PostForCreate {
+impl PostForCreate {
+    pub fn into_db(self, user_id: Uuid) -> crate::model::post::PostForCreate {
         crate::model::post::PostForCreate {
             id: uuid::Uuid::new_v4(),
             title: self.title,
             body: self.body,
-            user_id: self.user_id.into(),
+            user_id,
             disable_comments: self.disable_comments,
+            public_lvl: self.public_lvl.into(),
         }
     }
 }
@@ -91,4 +93,14 @@ impl From<crate::model::post::PostImage> for PostImage {
 pub struct PostImageForCreate {
     pub post_id: Id,
     pub image_id: Id,
+}
+
+impl Into<crate::model::post::PostImageForCreate> for PostImageForCreate {
+    fn into(self) -> crate::model::post::PostImageForCreate {
+        crate::model::post::PostImageForCreate {
+            id: uuid::Uuid::new_v4(),
+            post_id: self.post_id.into(),
+            image_id: self.image_id.into(),
+        }
+    }
 }

@@ -1,7 +1,4 @@
-use async_graphql::{
-    Context, Enum, Error, Guard, InputValueError, InputValueResult, Result, Scalar, ScalarType,
-};
-use serde::{Deserialize, Serialize};
+use async_graphql::{Context, Error, Guard, Result};
 use uuid::Uuid;
 
 use crate::{
@@ -10,13 +7,7 @@ use crate::{
     model::{account::AccountBmc, ModelManager},
 };
 
-pub enum Accessship {
-    AllowedPublic,
-    AllowedSubscriber,
-    Admin,
-    Owner,
-    None,
-}
+use super::Accessship;
 
 pub struct UserQueryGuard {
     id: Uuid,

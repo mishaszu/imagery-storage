@@ -12,6 +12,7 @@ pub struct Album {
     pub user_id: Uuid,
     pub name: String,
     pub description: String,
+    pub is_wall: bool,
     pub picture: Option<Uuid>,
     pub public_lvl: i32,
     pub created_at: chrono::DateTime<chrono::Utc>,
@@ -22,8 +23,10 @@ pub struct Album {
 #[diesel(table_name = album)]
 pub struct AlbumForCreate {
     pub id: Uuid,
+    pub user_id: Uuid,
     pub name: String,
     pub description: Option<String>,
+    pub is_wall: bool,
 }
 
 #[derive(AsChangeset, Insertable)]

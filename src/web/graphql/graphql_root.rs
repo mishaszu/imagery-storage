@@ -4,6 +4,7 @@ use reqwest::Client;
 use super::{
     account::{AccountMutation, AccountQuery},
     error::Error,
+    post::{PostMutation, PostQuery},
     user::{UserMutation, UserQuery},
 };
 use crate::{ctx::Ctx, model::ModelManager};
@@ -46,6 +47,7 @@ pub struct QueryRoot(
     TagQuery,
     ImageQuery,
     AlbumQuery,
+    PostQuery,
 );
 
 #[derive(MergedObject, Default)]
@@ -56,6 +58,7 @@ pub struct MutationRoot(
     TagMutation,
     ImageMutation,
     AlbumMutation,
+    PostMutation,
 );
 
 pub type ImagerySchema = Schema<QueryRoot, MutationRoot, EmptySubscription>;

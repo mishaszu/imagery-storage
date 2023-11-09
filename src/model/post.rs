@@ -31,6 +31,7 @@ pub struct PostForCreate {
     pub body: String,
     pub user_id: Uuid,
     pub disable_comments: bool,
+    pub public_lvl: i32,
 }
 
 #[derive(AsChangeset, Insertable)]
@@ -38,8 +39,8 @@ pub struct PostForCreate {
 pub struct PostForUpdate {
     pub title: Option<String>,
     pub body: Option<String>,
-    pub public_lvl: Option<i32>,
     pub disable_comments: Option<bool>,
+    pub public_lvl: Option<i32>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
@@ -83,11 +84,7 @@ impl PostBmc {
         Ok(post_n_account)
     }
 
-    pub fn create(
-        mm: &ModelManager,
-        post: &PostForCreate,
-        images: &Vec<PostImageForCreate>,
-    ) -> Result<Post> {
+    pub fn create(mm: &ModelManager, post: PostForCreate, images: Vec<Uuid>) -> Result<Post> {
         let mut connection = mm.conn()?;
 
         connection.transaction(|conn| {
@@ -95,7 +92,16 @@ impl PostBmc {
                 .values(post)
                 .get_result::<Post>(conn)?;
 
-            let images = diesel::insert_into(post_image::table)
+            let images = images
+                .into_iter()
+                .map(|image_id| PostImageForCreate {
+                    id: Uuid::new_v4(),
+                    post_id: post.id,
+                    image_id,
+                })
+                .collect::<Vec<PostImageForCreate>>();
+
+            diesel::insert_into(post_image::table)
                 .values(images)
                 .get_results::<PostImage>(conn)?;
 
@@ -117,7 +123,7 @@ impl PostBmc {
         Ok(post_image)
     }
 
-    pub fn update(mm: &ModelManager, post_id: Uuid, post: &PostForUpdate) -> Result<Post> {
+    pub fn update(mm: &ModelManager, post_id: &Uuid, post: PostForUpdate) -> Result<Post> {
         let mut connection = mm.conn()?;
         let post = diesel::update(post::table)
             .filter(post::id.eq(post_id))
@@ -146,12 +152,13 @@ impl PostBmc {
         let has_access = AccountBmc::has_access(mm, user_account_id, &target_user_id)?;
 
         let access_lvl = match has_access {
-            Accessship::Admin => 0,
-            Accessship::AllowedSubscriber => 1,
             Accessship::AllowedPublic => 2,
-            Accessship::Owner => 0,
+            Accessship::AllowedSubscriber => 1,
+            Accessship::Admin | Accessship::Owner => 0,
             Accessship::None => return Err(Error::AccessDenied),
         };
+
+        println!("access_lvl: {}", access_lvl);
 
         let posts = post::dsl::post
             .filter(post::user_id.eq(target_user_id))
@@ -176,7 +183,7 @@ impl PostBmc {
         Ok(post_image)
     }
 
-    pub fn delete(mm: &ModelManager, post_id: Uuid) -> Result<usize> {
+    pub fn delete(mm: &ModelManager, post_id: &Uuid) -> Result<usize> {
         let mut connection = mm.conn()?;
         let post = diesel::delete(post::table)
             .filter(post::id.eq(post_id))

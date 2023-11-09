@@ -137,16 +137,13 @@ impl UserBmc {
                     Ok(public)
                 }
             }
-            None => {
-                println!("list all public users");
-                users::dsl::users
-                    .inner_join(account::dsl::account)
-                    .filter(account::dsl::public_lvl.eq(2))
-                    .filter(account::dsl::is_banned.eq(false))
-                    .select(users::all_columns)
-                    .load::<User>(&mut connection)
-                    .map_err(|e| e.into())
-            }
+            None => users::dsl::users
+                .inner_join(account::dsl::account)
+                .filter(account::dsl::public_lvl.eq(2))
+                .filter(account::dsl::is_banned.eq(false))
+                .select(users::all_columns)
+                .load::<User>(&mut connection)
+                .map_err(|e| e.into()),
         }
     }
 

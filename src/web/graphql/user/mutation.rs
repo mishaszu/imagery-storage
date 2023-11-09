@@ -1,19 +1,18 @@
 use async_graphql::{Context, Object, Result};
 
 use crate::graphql::guard::{Role, RoleGuard};
-use crate::model::account::AccountBmc;
-use crate::model::referral;
 use crate::model::user::UserBmc;
 use crate::web::graphql::error::Error as GraphQLError;
 use crate::{graphql::scalars::Id, model::ModelManager};
 
-use super::model::{User, UserForCreate, UserForUpdate};
+use super::model::{User, UserForCreate};
 
 #[derive(Default)]
 pub struct UserMutation;
 
 #[Object]
 impl UserMutation {
+    #[graphql(guard = "RoleGuard::new(Role::Admin)")]
     async fn create_user(&self, ctx: &Context<'_>, input: UserForCreate) -> Result<User> {
         let mm = ctx.data_opt::<ModelManager>();
         let mm = match mm {
@@ -25,6 +24,7 @@ impl UserMutation {
         Ok(user.into())
     }
 
+    #[graphql(guard = "RoleGuard::new(Role::Admin)")]
     async fn delete_user(&self, ctx: &Context<'_>, id: Id) -> Result<String> {
         let mm = ctx.data_opt::<ModelManager>();
         let mm = match mm {

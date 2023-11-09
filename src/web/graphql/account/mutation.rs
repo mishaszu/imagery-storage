@@ -2,7 +2,6 @@ use async_graphql::{Context, Object, Result};
 
 use crate::graphql::guard::{Role, RoleGuard};
 use crate::model::account::AccountBmc;
-use crate::model::referral;
 use crate::web::graphql::error::Error as GraphQLError;
 use crate::{
     graphql::scalars::{DateTime, Id},

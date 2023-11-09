@@ -24,15 +24,16 @@ impl PostQuery {
         let app_ctx = ctx.data_opt::<Ctx>();
         let user_account_id = app_ctx.map(|r| r.account_id);
 
-        let (post, target_account) = PostBmc::get_with_account(mm, &post_id.into())
-            .map_err(GraphQLError::from_model_to_graphql)?;
+        let post =
+            PostBmc::get(mm, &post_id.into()).map_err(GraphQLError::from_model_to_graphql)?;
 
-        let has_access = AccountBmc::has_access(mm, user_account_id, &target_account.id.into())
+        let has_access = AccountBmc::has_access(mm, user_account_id, &post.user_id)
             .map_err(GraphQLError::from_model_to_graphql)?;
 
         match (has_access, post.public_lvl) {
             //
             (Accessship::AllowedSubscriber, 1)
+            | (Accessship::AllowedSubscriber, 2)
             | (Accessship::AllowedPublic, 2)
             | (Accessship::Admin, _)
             | (Accessship::Owner, _) => Ok(post.into()),

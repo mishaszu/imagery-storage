@@ -103,6 +103,17 @@ impl AccountBmc {
             .map_err(|e| e.into())
     }
 
+    pub fn get_referrals(mm: &ModelManager, id: &Uuid) -> Result<Vec<Account>> {
+        let mut connection = mm.conn()?;
+
+        referral::dsl::referral
+            .filter(referral::dsl::referrer_id.eq(id))
+            .inner_join(account::dsl::account.on(referral::dsl::user_id.eq(account::dsl::id)))
+            .select(account::all_columns)
+            .load(&mut connection)
+            .map_err(|e| e.into())
+    }
+
     pub fn has_access(
         mm: &ModelManager,
         user_account_id: Option<Uuid>,
@@ -117,10 +128,6 @@ impl AccountBmc {
             .select(account::all_columns)
             .first::<Account>(&mut connection)?;
 
-        if target_account.public_lvl == 2 {
-            return Ok(Accessship::AllowedPublic);
-        }
-
         let user_account_id = match user_account_id {
             Some(user_account_id) => user_account_id,
             None => return Ok(Accessship::None),
@@ -131,8 +138,12 @@ impl AccountBmc {
             .filter(account::dsl::is_banned.eq(false))
             .first::<Account>(&mut connection)?;
 
-        if user_account.id == target_account.id || user_account.is_admin {
+        if user_account.id == target_account.id {
             return Ok(Accessship::Owner);
+        }
+
+        if user_account.is_admin {
+            return Ok(Accessship::Admin);
         }
 
         let has_refferal = referral::dsl::referral
@@ -142,7 +153,8 @@ impl AccountBmc {
             .is_ok();
 
         match (target_account.public_lvl, has_refferal) {
-            (1, true) => Ok(Accessship::AllowedSubscriber),
+            (lvl, true) if lvl > 0 => Ok(Accessship::AllowedSubscriber),
+            (1, false) | (2, _) => Ok(Accessship::AllowedPublic),
             _ => Ok(Accessship::None),
         }
     }

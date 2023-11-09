@@ -1,6 +1,4 @@
-use async_graphql::{
-    Context, Enum, Error, Guard, InputValueError, InputValueResult, Result, Scalar, ScalarType,
-};
+use async_graphql::{Context, Enum, Error, Guard, Result};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -34,7 +32,7 @@ impl Guard for RoleGuard {
         let mm = ctx.data_opt::<ModelManager>();
         let mm = match mm {
             Some(mm) => mm,
-            None => return Err("Unauthorized 3".into()),
+            None => return Err("Unauthorized".into()),
         };
 
         let user = match app_ctx {
@@ -44,11 +42,14 @@ impl Guard for RoleGuard {
                 _ => return Err("Unauthorized 1".into()),
             },
         };
-        let account =
-            AccountBmc::get(mm, &user).map_err(|_| -> Error { "Unauthorized 2".into() })?;
+        let account = AccountBmc::get(mm, &user).map_err(|_| -> Error { "Unauthorized".into() })?;
 
-        if account.is_admin {
+        if account.is_admin && self.role == Role::Admin {
             return Ok(());
+        }
+
+        if account.is_admin == false && self.role == Role::Admin {
+            return Err("Unauthorized".into());
         }
 
         let kind = account.kind.as_str();

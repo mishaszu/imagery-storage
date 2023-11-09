@@ -11,6 +11,7 @@ pub struct Album {
     pub user_id: Id,
     pub name: String,
     pub description: String,
+    pub is_wall: bool,
     pub picture: Option<Id>,
     pub public_lvl: i32,
     pub created_at: DateTime,
@@ -74,6 +75,7 @@ impl From<crate::model::album::Album> for Album {
             user_id: album.user_id.into(),
             name: album.name,
             description: album.description,
+            is_wall: album.is_wall,
             picture: album.picture.map(|id| id.into()),
             public_lvl: album.public_lvl,
             created_at: album.created_at.into(),
@@ -84,16 +86,20 @@ impl From<crate::model::album::Album> for Album {
 
 #[derive(Debug, Clone, Deserialize, InputObject)]
 pub struct AlbumForCreate {
+    pub user_id: Id,
     pub name: String,
     pub description: Option<String>,
+    pub is_wall: bool,
 }
 
 impl Into<crate::model::album::AlbumForCreate> for AlbumForCreate {
     fn into(self) -> crate::model::album::AlbumForCreate {
         crate::model::album::AlbumForCreate {
             id: Uuid::new_v4(),
+            user_id: self.user_id.into(),
             name: self.name,
             description: self.description,
+            is_wall: self.is_wall,
         }
     }
 }

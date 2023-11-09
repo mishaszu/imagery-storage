@@ -25,6 +25,7 @@ diesel::table! {
         name -> Varchar,
         #[max_length = 255]
         description -> Varchar,
+        is_wall -> Bool,
         picture -> Nullable<Uuid>,
         public_lvl -> Int4,
         created_at -> Timestamptz,
