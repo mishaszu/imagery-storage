@@ -9,13 +9,14 @@ CREATE TABLE users (
   FOREIGN KEY (account_id) REFERENCES account (id) ON DELETE CASCADE
 );
 
+-- initial password to change: dev_only_pwd
 INSERT INTO
     users (id, nick, email, hash, account_id)
 VALUES
     (
         'a74f9b43-8a49-4d97-8270-9879d37c600d',
-        'mishaszu',
-        'mishaszu@gmail.com',
+        'root_admin',
+        'root@test.com',
         '$argon2id$v=19$m=19456,t=2,p=1$AreaBODoNb1PVkrVYG47YQ$RqDZNg9uwWgRDFoeJkIED5RarIBPky6a0mvjr8sqVfs',
         'bf473007-7c05-4975-941a-dbd16426844d'
     );

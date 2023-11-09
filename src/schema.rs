@@ -79,6 +79,7 @@ diesel::table! {
         title -> Varchar,
         body -> Text,
         user_id -> Uuid,
+        disable_comments -> Bool,
         public_lvl -> Int4,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,

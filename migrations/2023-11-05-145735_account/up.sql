@@ -10,15 +10,14 @@ CREATE TABLE account (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- initial password to change: test_pass
 INSERT INTO
     account (id, email, is_admin, fullname)
 VALUES
     (
         'bf473007-7c05-4975-941a-dbd16426844d',
-        'mishaszu@gmail.com',
+        'root@test.com',
         true,
-        'my full name'
+        'admin name'
     );
 
 

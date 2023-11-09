@@ -3,7 +3,7 @@ CREATE TABLE post (
   title VARCHAR(255) NOT NULL,
   body TEXT NOT NULL,
   user_id UUID NOT NULL,
-  -- 0 = private, 1 = close followers, 2 = all followers, 3 = public
+  disable_comments BOOLEAN NOT NULL DEFAULT FALSE,
   public_lvl INT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

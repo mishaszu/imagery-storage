@@ -15,6 +15,7 @@ pub struct Post {
     pub title: String,
     pub body: String,
     pub user_id: Uuid,
+    pub disable_comments: bool,
     pub public_lvl: i32,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
@@ -27,6 +28,7 @@ pub struct PostForCreate {
     pub title: String,
     pub body: String,
     pub user_id: Uuid,
+    pub disable_comments: bool,
 }
 
 #[derive(AsChangeset, Insertable)]
@@ -35,6 +37,7 @@ pub struct PostForUpdate {
     pub title: Option<String>,
     pub body: Option<String>,
     pub public_lvl: Option<i32>,
+    pub disable_comments: Option<bool>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
