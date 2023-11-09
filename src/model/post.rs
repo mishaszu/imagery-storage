@@ -158,8 +158,6 @@ impl PostBmc {
             Accessship::None => return Err(Error::AccessDenied),
         };
 
-        println!("access_lvl: {}", access_lvl);
-
         let posts = post::dsl::post
             .filter(post::user_id.eq(target_user_id))
             .filter(post::public_lvl.ge(access_lvl))
