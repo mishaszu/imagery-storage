@@ -2,7 +2,6 @@ use async_graphql::{Context, Object, Result};
 
 use crate::ctx::Ctx;
 use crate::graphql::guard::{Accessship, Role, RoleGuard};
-use crate::model::account::AccountBmc;
 use crate::model::post::PostBmc;
 use crate::web::graphql::error::Error as GraphQLError;
 use crate::{graphql::scalars::Id, model::ModelManager};
@@ -22,15 +21,19 @@ impl PostQuery {
         };
 
         let app_ctx = ctx.data_opt::<Ctx>();
-        let user_account_id = app_ctx.map(|r| r.account_id);
+        let user_account_id = match app_ctx {
+            Some(ctx) => ctx.account_id,
+            None => return Err(GraphQLError::AuthError.into()),
+        };
 
         let post =
             PostBmc::get(mm, &post_id.into()).map_err(GraphQLError::from_model_to_graphql)?;
 
-        let has_access = AccountBmc::has_access(mm, user_account_id, &post.user_id)
+        let access = post
+            .user_access(mm, &user_account_id)
             .map_err(GraphQLError::from_model_to_graphql)?;
 
-        match (has_access, post.public_lvl) {
+        match (access, post.public_lvl) {
             //
             (Accessship::AllowedSubscriber, 1)
             | (Accessship::AllowedSubscriber, 2)
@@ -41,7 +44,7 @@ impl PostQuery {
         }
     }
 
-    async fn posts(&self, ctx: &Context<'_>, user_id: Id) -> Result<Vec<Post>> {
+    async fn posts(&self, ctx: &Context<'_>, user_id: Option<Id>) -> Result<Vec<Option<Post>>> {
         let mm = ctx.data_opt::<ModelManager>();
         let mm = match mm {
             Some(mm) => mm,
@@ -49,12 +52,16 @@ impl PostQuery {
         };
 
         let app_ctx = ctx.data_opt::<Ctx>();
-        let user_account_id = app_ctx.map(|r| r.account_id);
+        let (search_user_id, user_account_id) = match (user_id, app_ctx) {
+            (Some(user_id), Some(user)) => (user_id.into(), user.account_id),
+            (None, Some(user)) => (user.user_id.into(), user.account_id),
+            _ => return Ok(vec![]),
+        };
 
-        let posts = PostBmc::list(mm, user_account_id, &user_id.into())
+        let posts = PostBmc::list(mm, user_account_id, &search_user_id)
             .map_err(GraphQLError::from_model_to_graphql)?;
 
-        Ok(posts.into_iter().map(|r| r.into()).collect())
+        Ok(posts.into_iter().map(|r| r.map(|r| r.into())).collect())
     }
 
     #[graphql(guard = "RoleGuard::new(Role::Admin)")]

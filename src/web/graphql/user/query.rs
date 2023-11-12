@@ -1,6 +1,6 @@
 use async_graphql::{Context, Object, Result};
 
-use crate::graphql::guard::{Role, RoleGuard, UserQueryGuard};
+use crate::graphql::guard::UserQueryGuard;
 use crate::model::user::UserBmc;
 use crate::web::graphql::error::Error as GraphQLError;
 use crate::{graphql::scalars::Id, model::ModelManager};

@@ -1,19 +1,31 @@
 use async_graphql::{Context, Error, Guard, Result};
+use tracing::debug;
 use uuid::Uuid;
 
-use crate::{
-    ctx::Ctx,
-    graphql::scalars::Id,
-    model::{account::AccountBmc, ModelManager},
-};
+use crate::web::graphql::error::Error as GraphQLError;
+use crate::{ctx::Ctx, graphql::scalars::Id, model::ModelManager};
 
-#[derive(Eq, PartialEq)]
+#[derive(Eq, PartialEq, Debug)]
 pub enum Accessship {
     AllowedPublic,
     AllowedSubscriber,
     Admin,
     Owner,
     None,
+}
+
+impl TryInto<i32> for Accessship {
+    type Error = crate::model::Error;
+
+    fn try_into(self) -> Result<i32, Self::Error> {
+        match self {
+            Self::AllowedPublic => Ok(2),
+            Self::AllowedSubscriber => Ok(1),
+            Self::Admin => Ok(0),
+            Self::Owner => Ok(0),
+            Self::None => Err(crate::model::Error::AccessDenied),
+        }
+    }
 }
 
 pub struct CreatorGuard {
@@ -37,22 +49,26 @@ impl Guard for CreatorGuard {
         let mm = ctx.data_opt::<ModelManager>();
         let mm = match mm {
             Some(mm) => mm,
-            None => return Err("Unauthorized".into()),
+            None => {
+                debug!("{:<12} - No User Logged in", "CreatorGuard");
+                return Err("Not Found".into());
+            }
         };
 
-        let user_account_id = app_ctx.map(|r| r.account_id);
+        let user_account_id = match app_ctx {
+            Some(ctx) => ctx.account_id,
+            None => return Err(GraphQLError::AuthError.into()),
+        };
 
-        let (_, target_account) = crate::model::post::PostBmc::get_with_account(mm, &self.post_id)
+        let post = crate::model::post::PostBmc::get(mm, &self.post_id)
             .map_err(|_| -> Error { "Unauthorized".into() })?;
 
-        let has_access = AccountBmc::has_access(mm, user_account_id, &target_account.id)
+        let has_access = post
+            .user_access(mm, &user_account_id)
             .map_err(|_| -> Error { "Unauthorized".into() })?;
 
         match (has_access, self.admin_allowed) {
-            (Accessship::AllowedSubscriber, false)
-            | (Accessship::AllowedPublic, false)
-            | (Accessship::Admin, true)
-            | (Accessship::Owner, true) => Ok(()),
+            (Accessship::Admin, true) | (Accessship::Owner, _) => Ok(()),
             _ => Err("Unauthorized".into()),
         }
     }

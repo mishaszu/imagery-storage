@@ -103,6 +103,17 @@ impl AccountBmc {
             .map_err(|e| e.into())
     }
 
+    pub fn get_by_user_id(mm: &ModelManager, user_id: &Uuid) -> Result<Account> {
+        let mut connection = mm.conn()?;
+
+        users::dsl::users
+            .filter(users::dsl::id.eq(user_id))
+            .inner_join(account::dsl::account.on(users::dsl::id.eq(account::dsl::id)))
+            .select(account::all_columns)
+            .first(&mut connection)
+            .map_err(|e| e.into())
+    }
+
     pub fn get_referrals(mm: &ModelManager, id: &Uuid) -> Result<Vec<Account>> {
         let mut connection = mm.conn()?;
 
@@ -112,51 +123,6 @@ impl AccountBmc {
             .select(account::all_columns)
             .load(&mut connection)
             .map_err(|e| e.into())
-    }
-
-    pub fn has_access(
-        mm: &ModelManager,
-        user_account_id: Option<Uuid>,
-        target_user_id: &Uuid,
-    ) -> Result<Accessship> {
-        let mut connection = mm.conn()?;
-
-        let target_account = users::dsl::users
-            .filter(users::dsl::id.eq(target_user_id))
-            .inner_join(account::dsl::account)
-            .filter(account::dsl::is_banned.eq(false))
-            .select(account::all_columns)
-            .first::<Account>(&mut connection)?;
-
-        let user_account_id = match user_account_id {
-            Some(user_account_id) => user_account_id,
-            None => return Ok(Accessship::None),
-        };
-
-        let user_account = account::dsl::account
-            .filter(account::dsl::id.eq(user_account_id))
-            .filter(account::dsl::is_banned.eq(false))
-            .first::<Account>(&mut connection)?;
-
-        if user_account.id == target_account.id {
-            return Ok(Accessship::Owner);
-        }
-
-        if user_account.is_admin {
-            return Ok(Accessship::Admin);
-        }
-
-        let has_refferal = referral::dsl::referral
-            .filter(referral::dsl::user_id.eq(user_account.id))
-            .filter(referral::dsl::referrer_id.eq(target_account.id))
-            .first::<Referral>(&mut connection)
-            .is_ok();
-
-        match (target_account.public_lvl, has_refferal) {
-            (lvl, true) if lvl > 0 => Ok(Accessship::AllowedSubscriber),
-            (1, false) | (2, _) => Ok(Accessship::AllowedPublic),
-            _ => Ok(Accessship::None),
-        }
     }
 
     pub fn list(mm: &ModelManager) -> Result<Vec<Account>> {
@@ -186,5 +152,58 @@ impl AccountBmc {
         diesel::delete(account::dsl::account.filter(account::dsl::id.eq(id)))
             .execute(&mut connection)
             .map_err(|e| e.into())
+    }
+}
+
+impl Account {
+    fn compare_access(&self, mm: &ModelManager, account: Account) -> Result<Accessship> {
+        if account.is_admin {
+            return Ok(Accessship::Admin);
+        }
+
+        if account.is_banned {
+            return Ok(Accessship::None);
+        }
+
+        if account.id == self.id {
+            return Ok(Accessship::Owner);
+        }
+
+        let has_refferal = account.has_refferal(mm, self.id)?;
+        match (self.public_lvl, has_refferal) {
+            (2, _) => Ok(Accessship::AllowedPublic),
+            (lvl, true) if lvl > 0 => Ok(Accessship::AllowedSubscriber),
+            _ => Ok(Accessship::None),
+        }
+    }
+
+    pub fn has_access(&self, mm: &ModelManager, account_id: Uuid) -> Result<Accessship> {
+        let mut connection = mm.conn()?;
+
+        let user_account = account::dsl::account
+            .filter(account::dsl::id.eq(account_id))
+            .first::<Account>(&mut connection)?;
+
+        self.compare_access(mm, user_account)
+    }
+
+    pub fn has_user_access(&self, mm: &ModelManager, user_id: &Uuid) -> Result<Accessship> {
+        let mut connection = mm.conn()?;
+
+        let user_account = AccountBmc::get_by_user_id(mm, &user_id)?;
+
+        self.compare_access(mm, user_account)
+    }
+
+    pub fn has_refferal(&self, mm: &ModelManager, account_id: Uuid) -> Result<bool> {
+        let mut connection = mm.conn()?;
+
+        let has_refferal = referral::dsl::referral
+            .filter(referral::dsl::user_id.eq(account_id))
+            .filter(referral::dsl::referrer_id.eq(self.id))
+            .first::<Referral>(&mut connection)
+            .is_ok();
+
+        Ok(has_refferal)
     }
 }

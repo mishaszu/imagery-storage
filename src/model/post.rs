@@ -5,10 +5,10 @@ use diesel::{
 use uuid::Uuid;
 
 use crate::graphql::guard::Accessship;
-use crate::schema::{account, post, post_image, users};
+use crate::schema::{post, post_image};
 
-use super::account::{Account, AccountBmc};
-use super::{Error, ModelManager, Result};
+use super::account::AccountBmc;
+use super::{ModelManager, Result};
 
 #[derive(Debug, Clone, PartialEq, Identifiable, Queryable)]
 #[diesel(table_name = post)]
@@ -72,18 +72,6 @@ impl PostBmc {
         Ok(post)
     }
 
-    pub fn get_with_account(mm: &ModelManager, post_id: &Uuid) -> Result<(Post, Account)> {
-        let mut connection = mm.conn()?;
-        let post_n_account = post::dsl::post
-            .filter(post::id.eq(post_id))
-            .inner_join(users::dsl::users)
-            .inner_join(account::dsl::account.on(users::account_id.eq(account::id)))
-            .select((post::all_columns, account::all_columns))
-            .first::<(Post, Account)>(&mut connection)?;
-
-        Ok(post_n_account)
-    }
-
     pub fn create(mm: &ModelManager, post: PostForCreate, images: Vec<Uuid>) -> Result<Post> {
         let mut connection = mm.conn()?;
 
@@ -144,25 +132,33 @@ impl PostBmc {
 
     pub fn list(
         mm: &ModelManager,
-        user_account_id: Option<Uuid>,
+        user_account_id: Uuid,
         target_user_id: &Uuid,
-    ) -> Result<Vec<Post>> {
+    ) -> Result<Vec<Option<Post>>> {
         let mut connection = mm.conn()?;
 
-        let has_access = AccountBmc::has_access(mm, user_account_id, &target_user_id)?;
+        let target_account = AccountBmc::get(mm, target_user_id)?;
 
-        let access_lvl = match has_access {
-            Accessship::AllowedPublic => 2,
-            Accessship::AllowedSubscriber => 1,
-            Accessship::Admin | Accessship::Owner => 0,
-            Accessship::None => return Err(Error::AccessDenied),
-        };
+        let access_lvl: i32 = target_account
+            .has_user_access(mm, &user_account_id)?
+            .try_into()?;
 
         let posts = post::dsl::post
             .filter(post::user_id.eq(target_user_id))
-            .filter(post::public_lvl.ge(access_lvl))
             .order(post::created_at.desc())
-            .load::<Post>(&mut connection)?;
+            .load::<Post>(&mut connection)
+            .map(|posts: Vec<Post>| {
+                posts
+                    .into_iter()
+                    .map(|post| {
+                        if post.public_lvl <= access_lvl {
+                            Some(post)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<Vec<Option<Post>>>()
+            })?;
 
         Ok(posts)
     }
@@ -188,5 +184,16 @@ impl PostBmc {
             .execute(&mut connection)?;
 
         Ok(post)
+    }
+}
+
+impl Post {
+    pub fn user_access(&self, mm: &ModelManager, user_id: &Uuid) -> Result<Accessship> {
+        let mut connection = mm.conn()?;
+
+        let account = AccountBmc::get_by_user_id(mm, &self.user_id)?;
+        let has_access = account.has_user_access(mm, user_id)?;
+
+        Ok(has_access)
     }
 }

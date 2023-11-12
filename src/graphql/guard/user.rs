@@ -1,6 +1,7 @@
 use async_graphql::{Context, Error, Guard, Result};
 use uuid::Uuid;
 
+use crate::web::graphql::error::Error as GraphQLError;
 use crate::{
     ctx::Ctx,
     graphql::scalars::Id,
@@ -29,9 +30,16 @@ impl Guard for UserQueryGuard {
             None => return Err("Unauthorized".into()),
         };
 
-        let user_account_id = app_ctx.map(|r| r.account_id);
+        let user_account_id = match app_ctx {
+            Some(ctx) => ctx.account_id,
+            None => return Err(GraphQLError::AuthError.into()),
+        };
 
-        let has_access = AccountBmc::has_access(mm, user_account_id, &self.id.into())
+        let user_account =
+            AccountBmc::get(mm, &self.id.into()).map_err(|_| -> Error { "Unauthorized".into() })?;
+
+        let has_access = user_account
+            .has_access(mm, user_account_id)
             .map_err(|_| -> Error { "Unauthorized".into() })?;
 
         match has_access {
