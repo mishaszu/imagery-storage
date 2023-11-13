@@ -1,9 +1,7 @@
-use async_graphql::{
-    Context, Enum, Error, Guard, InputValueError, InputValueResult, Result, Scalar, ScalarType,
-};
-use serde::{Deserialize, Serialize};
+use async_graphql::{Context, Guard, Result};
 use uuid::Uuid;
 
+use crate::web::graphql::error::Error as GraphQLError;
 use crate::{
     ctx::Ctx,
     model::{account::AccountBmc, ModelManager},
@@ -26,25 +24,24 @@ impl Guard for SelfOrAdminGuard {
         let mm = ctx.data_opt::<ModelManager>();
         let mm = match mm {
             Some(mm) => mm,
-            None => return Err("Unauthorized 3".into()),
+            None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
 
         let (account_id, user_id) = match app_ctx {
             Some(ctx) => (ctx.account_id, ctx.user_id),
-            None => return Err("Unauthorized 1".into()),
+            None => return Err(GraphQLError::AccessError("No user logged in".to_string()).into()),
         };
 
         if user_id == self.id {
             return Ok(());
         }
 
-        let account =
-            AccountBmc::get(mm, &account_id).map_err(|_| -> Error { "Unauthorized 2".into() })?;
+        let account = AccountBmc::get(mm, &account_id).map_err(GraphQLError::ModelError)?;
 
         if account.is_admin {
             return Ok(());
         } else {
-            return Err("Unauthorized 1".into());
+            return Err(GraphQLError::AuthError.into());
         }
     }
 }

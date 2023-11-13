@@ -17,8 +17,7 @@ impl AlbumMutation {
             Some(mm) => mm,
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
-        let album =
-            AlbumBmc::create(mm, input.into()).map_err(GraphQLError::from_model_to_graphql)?;
+        let album = AlbumBmc::create(mm, input.into()).map_err(GraphQLError::ModelError)?;
         Ok(album.into())
     }
 
@@ -33,8 +32,8 @@ impl AlbumMutation {
             Some(mm) => mm,
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
-        let album = AlbumBmc::update(mm, id.into(), input.into())
-            .map_err(GraphQLError::from_model_to_graphql)?;
+        let album =
+            AlbumBmc::update(mm, id.into(), input.into()).map_err(GraphQLError::ModelError)?;
         Ok(album.into())
     }
 
@@ -44,7 +43,7 @@ impl AlbumMutation {
             Some(mm) => mm,
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
-        AlbumBmc::delete(mm, id.into()).map_err(GraphQLError::from_model_to_graphql)?;
+        AlbumBmc::delete(mm, id.into()).map_err(GraphQLError::ModelError)?;
         Ok("Album deleted".to_string())
     }
 
@@ -93,8 +92,7 @@ impl AlbumMutation {
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
 
-        AlbumBmc::create_album_post(mm, input.into())
-            .map_err(GraphQLError::from_model_to_graphql)?;
+        AlbumBmc::create_album_post(mm, input.into()).map_err(GraphQLError::ModelError)?;
         Ok("Album image added".to_string())
     }
 }

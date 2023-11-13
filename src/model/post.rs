@@ -189,8 +189,6 @@ impl PostBmc {
 
 impl Post {
     pub fn user_access(&self, mm: &ModelManager, user_id: &Uuid) -> Result<Accessship> {
-        let mut connection = mm.conn()?;
-
         let account = AccountBmc::get_by_user_id(mm, &self.user_id)?;
         let has_access = account.has_user_access(mm, user_id)?;
 

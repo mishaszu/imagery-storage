@@ -27,7 +27,7 @@ pub struct User {
 
 #[ComplexObject]
 impl User {
-    /// user's account. Access only for admin
+    /// user's account - Access only for admin
     #[graphql(guard = "RoleGuard::new(Role::Admin)")]
     pub async fn account(&self, ctx: &Context<'_>) -> Result<Account> {
         let mm = ctx.data_opt::<ModelManager>();
@@ -36,8 +36,8 @@ impl User {
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
 
-        let account = AccountBmc::get(mm, &self.account_id.into())
-            .map_err(GraphQLError::from_model_to_graphql)?;
+        let account =
+            AccountBmc::get(mm, &self.account_id.into()).map_err(GraphQLError::ModelError)?;
 
         Ok(account.into())
     }

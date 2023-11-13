@@ -17,8 +17,7 @@ impl TagMutation {
             Some(mm) => mm,
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
-        let tag = TagBmc::create(mm, tag_for_create.into())
-            .map_err(GraphQLError::from_model_to_graphql)?;
+        let tag = TagBmc::create(mm, tag_for_create.into()).map_err(GraphQLError::ModelError)?;
         Ok(tag.into())
     }
     async fn update_tag(
@@ -33,7 +32,7 @@ impl TagMutation {
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
         let tag = TagBmc::update(mm, id.into(), tag_for_udpate.into())
-            .map_err(GraphQLError::from_model_to_graphql)?;
+            .map_err(GraphQLError::ModelError)?;
         Ok(tag.into())
     }
     async fn delete_tag(&self, ctx: &Context<'_>, id: Id) -> Result<String> {
@@ -42,7 +41,7 @@ impl TagMutation {
             Some(mm) => mm,
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
-        TagBmc::delete(mm, id.into()).map_err(GraphQLError::from_model_to_graphql)?;
+        TagBmc::delete(mm, id.into()).map_err(GraphQLError::ModelError)?;
         Ok("Tag deleted".to_string())
     }
 }

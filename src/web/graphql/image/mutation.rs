@@ -20,8 +20,7 @@ impl ImageMutation {
             Some(mm) => mm,
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
-        let image =
-            ImageBmc::create(mm, input.into()).map_err(GraphQLError::from_model_to_graphql)?;
+        let image = ImageBmc::create(mm, input.into()).map_err(GraphQLError::ModelError)?;
         Ok(image.into())
     }
 
@@ -36,8 +35,7 @@ impl ImageMutation {
             Some(mm) => mm,
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
-        let image = ImageBmc::update(mm, id.0, input.into())
-            .map_err(GraphQLError::from_model_to_graphql)?;
+        let image = ImageBmc::update(mm, id.0, input.into()).map_err(GraphQLError::ModelError)?;
         Ok(image.into())
     }
 
@@ -50,11 +48,11 @@ impl ImageMutation {
             Some(mm) => mm,
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
-        let image = ImageBmc::get(mm, id.0).map_err(GraphQLError::from_model_to_graphql)?;
+        let image = ImageBmc::get(mm, id.0).map_err(GraphQLError::ModelError)?;
         Lust::delete_file(client, image.path.to_string())
             .await
             .map_err(|e| -> Error { e.into() })?;
-        ImageBmc::delete(mm, id.0).map_err(GraphQLError::from_model_to_graphql)?;
+        ImageBmc::delete(mm, id.0).map_err(GraphQLError::ModelError)?;
         Ok("Image deleted".to_string())
     }
 
@@ -67,7 +65,7 @@ impl ImageMutation {
 
         let ids: Vec<Uuid> = ids.into_iter().map(|id| id.0).collect();
 
-        ImageBmc::delete_many(mm, ids).map_err(GraphQLError::from_model_to_graphql)?;
+        ImageBmc::delete_many(mm, ids).map_err(GraphQLError::ModelError)?;
         Ok("Images deleted".to_string())
     }
 }

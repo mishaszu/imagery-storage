@@ -1,6 +1,7 @@
-use async_graphql::{Context, Enum, Error, Guard, Result};
+use async_graphql::{Context, Enum, Guard, Result};
 use serde::{Deserialize, Serialize};
 
+use crate::web::graphql::error::Error as GraphQLError;
 use crate::{
     ctx::Ctx,
     model::{account::AccountBmc, ModelManager},
@@ -32,24 +33,24 @@ impl Guard for RoleGuard {
         let mm = ctx.data_opt::<ModelManager>();
         let mm = match mm {
             Some(mm) => mm,
-            None => return Err("Unauthorized".into()),
+            None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
 
         let user = match app_ctx {
             Some(ctx) => ctx.account_id,
             None => match self.role {
                 Role::Guest => return Ok(()),
-                _ => return Err("Unauthorized 1".into()),
+                _ => return Err(GraphQLError::AccessError("No user logged in".to_string()).into()),
             },
         };
-        let account = AccountBmc::get(mm, &user).map_err(|_| -> Error { "Unauthorized".into() })?;
+        let account = AccountBmc::get(mm, &user).map_err(GraphQLError::ModelError)?;
 
         if account.is_admin && self.role == Role::Admin {
             return Ok(());
         }
 
         if account.is_admin == false && self.role == Role::Admin {
-            return Err("Unauthorized".into());
+            return Err(GraphQLError::AccessError(account.id.to_string()).into());
         }
 
         let kind = account.kind.as_str();
@@ -61,7 +62,7 @@ impl Guard for RoleGuard {
             | ("creator", Role::Guest) => Ok(()),
             ("commenter", Role::Commenter) | ("commenter", Role::Guest) => Ok(()),
             ("guest", Role::Guest) => Ok(()),
-            _ => Err("Unauthorized 1".into()),
+            _ => Err(GraphQLError::AuthError.into()),
         }
     }
 }

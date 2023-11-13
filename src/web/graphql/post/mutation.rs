@@ -29,14 +29,14 @@ impl PostMutation {
 
         let user_id = match ctx.data_opt::<crate::ctx::Ctx>() {
             Some(ctx) => ctx.user_id,
-            None => return Err(GraphQLError::AuthError.into()),
+            None => return Err(GraphQLError::AccessError("No user logged in".to_string()).into()),
         };
 
         let db_post = post.into_db(user_id);
         let db_post_images: Vec<Uuid> = post_images.into_iter().map(|r| r.into()).collect();
 
-        let post = PostBmc::create(mm, db_post, db_post_images)
-            .map_err(GraphQLError::from_model_to_graphql)?;
+        let post =
+            PostBmc::create(mm, db_post, db_post_images).map_err(GraphQLError::ModelError)?;
 
         Ok(post.into())
     }
@@ -54,8 +54,8 @@ impl PostMutation {
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
 
-        let post = PostBmc::update(mm, &post_id.into(), post.into())
-            .map_err(GraphQLError::from_model_to_graphql)?;
+        let post =
+            PostBmc::update(mm, &post_id.into(), post.into()).map_err(GraphQLError::ModelError)?;
 
         Ok(post.into())
     }
@@ -84,7 +84,7 @@ impl PostMutation {
             None => return Ok("".to_string()),
         };
 
-        PostBmc::delete(mm, &post_id.into()).map_err(GraphQLError::from_model_to_graphql)?;
+        PostBmc::delete(mm, &post_id.into()).map_err(GraphQLError::ModelError)?;
 
         Ok("Post deleted".to_string())
     }

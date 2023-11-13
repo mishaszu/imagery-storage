@@ -22,8 +22,7 @@ impl AccountMutation {
             Some(mm) => mm,
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
-        let account =
-            AccountBmc::create(mm, input.into()).map_err(GraphQLError::from_model_to_graphql)?;
+        let account = AccountBmc::create(mm, input.into()).map_err(GraphQLError::ModelError)?;
         Ok(account.into())
     }
 
@@ -41,7 +40,7 @@ impl AccountMutation {
         };
 
         let account = AccountBmc::create_with_referral(mm, &referrer_id.into(), None, input.into())
-            .map_err(GraphQLError::from_model_to_graphql)?;
+            .map_err(GraphQLError::ModelError)?;
         Ok(account.into())
     }
 
@@ -57,8 +56,8 @@ impl AccountMutation {
             Some(mm) => mm,
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
-        let account = AccountBmc::update(mm, &id.into(), input.into())
-            .map_err(GraphQLError::from_model_to_graphql)?;
+        let account =
+            AccountBmc::update(mm, &id.into(), input.into()).map_err(GraphQLError::ModelError)?;
         Ok(account.into())
     }
 
@@ -69,7 +68,7 @@ impl AccountMutation {
             Some(mm) => mm,
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
-        AccountBmc::delete(mm, &id.into()).map_err(GraphQLError::from_model_to_graphql)?;
+        AccountBmc::delete(mm, &id.into()).map_err(GraphQLError::ModelError)?;
         Ok("Account deleted".to_string())
     }
 
@@ -92,7 +91,7 @@ impl AccountMutation {
             &user_id.into(),
             exp.map(|x| x.into()),
         )
-        .map_err(GraphQLError::from_model_to_graphql)?;
+        .map_err(GraphQLError::ModelError)?;
         Ok("Referral added".to_string())
     }
 }

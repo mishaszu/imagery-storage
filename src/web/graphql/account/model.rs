@@ -32,8 +32,8 @@ impl Account {
             Some(mm) => mm,
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
-        let user = UserBmc::get_by_account_id(mm, &self.id.into())
-            .map_err(GraphQLError::from_model_to_graphql)?;
+        let user =
+            UserBmc::get_by_account_id(mm, &self.id.into()).map_err(GraphQLError::ModelError)?;
         Ok(user.into())
     }
 
@@ -43,8 +43,8 @@ impl Account {
             Some(mm) => mm,
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
-        let users = AccountBmc::get_referrals(mm, &self.id.into())
-            .map_err(GraphQLError::from_model_to_graphql)?;
+        let users =
+            AccountBmc::get_referrals(mm, &self.id.into()).map_err(GraphQLError::ModelError)?;
         Ok(users.into_iter().map(|r| r.into()).collect())
     }
 }

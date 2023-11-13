@@ -1,5 +1,4 @@
-use async_graphql::{Context, Error, Guard, Result};
-use tracing::debug;
+use async_graphql::{Context, Guard, Result};
 use uuid::Uuid;
 
 use crate::web::graphql::error::Error as GraphQLError;
@@ -50,26 +49,25 @@ impl Guard for CreatorGuard {
         let mm = match mm {
             Some(mm) => mm,
             None => {
-                debug!("{:<12} - No User Logged in", "CreatorGuard");
-                return Err("Not Found".into());
+                return Err(GraphQLError::ModalManagerNotInContext.into());
             }
         };
 
         let user_account_id = match app_ctx {
             Some(ctx) => ctx.account_id,
-            None => return Err(GraphQLError::AuthError.into()),
+            None => return Err(GraphQLError::AccessError("No user logged in".to_string()).into()),
         };
 
         let post = crate::model::post::PostBmc::get(mm, &self.post_id)
-            .map_err(|_| -> Error { "Unauthorized".into() })?;
+            .map_err(GraphQLError::ModelError)?;
 
         let has_access = post
             .user_access(mm, &user_account_id)
-            .map_err(|_| -> Error { "Unauthorized".into() })?;
+            .map_err(GraphQLError::ModelError)?;
 
         match (has_access, self.admin_allowed) {
             (Accessship::Admin, true) | (Accessship::Owner, _) => Ok(()),
-            _ => Err("Unauthorized".into()),
+            _ => Err(GraphQLError::AccessError(user_account_id.to_string()).into()),
         }
     }
 }

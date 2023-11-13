@@ -17,7 +17,7 @@ impl TagQuery {
             Some(mm) => mm,
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
-        let tag = TagBmc::get(mm, id.0).map_err(GraphQLError::from_model_to_graphql)?;
+        let tag = TagBmc::get(mm, id.0).map_err(GraphQLError::ModelError)?;
         Ok(tag.into())
     }
     // async fn tags(

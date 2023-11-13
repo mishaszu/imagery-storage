@@ -20,7 +20,7 @@ impl UserQuery {
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
 
-        let user = UserBmc::get(mm, &id.into()).map_err(GraphQLError::from_model_to_graphql)?;
+        let user = UserBmc::get(mm, &id.into()).map_err(GraphQLError::ModelError)?;
 
         Ok(user.into())
     }
@@ -36,8 +36,7 @@ impl UserQuery {
 
         match user_id {
             Some(user_id) => {
-                let user =
-                    UserBmc::get(mm, &user_id).map_err(GraphQLError::from_model_to_graphql)?;
+                let user = UserBmc::get(mm, &user_id).map_err(GraphQLError::ModelError)?;
                 Ok(user.into())
             }
             None => Err(GraphQLError::AuthError.into()),
@@ -53,8 +52,7 @@ impl UserQuery {
 
         let user_account_id = ctx.data_opt::<crate::ctx::Ctx>().map(|r| r.account_id);
 
-        let users =
-            UserBmc::list(mm, user_account_id).map_err(GraphQLError::from_model_to_graphql)?;
+        let users = UserBmc::list(mm, user_account_id).map_err(GraphQLError::ModelError)?;
 
         Ok(users.into_iter().map(|r| r.into()).collect())
     }

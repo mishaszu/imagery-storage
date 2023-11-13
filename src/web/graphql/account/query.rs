@@ -19,8 +19,7 @@ impl AccountQuery {
             Some(mm) => mm,
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
-        let account =
-            AccountBmc::get(mm, &id.into()).map_err(GraphQLError::from_model_to_graphql)?;
+        let account = AccountBmc::get(mm, &id.into()).map_err(GraphQLError::ModelError)?;
         Ok(account.into())
     }
 
@@ -31,7 +30,7 @@ impl AccountQuery {
             Some(mm) => mm,
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
-        let accounts = AccountBmc::list(mm).map_err(GraphQLError::from_model_to_graphql)?;
+        let accounts = AccountBmc::list(mm).map_err(GraphQLError::ModelError)?;
         Ok(accounts.into_iter().map(|r| r.into()).collect())
     }
 }

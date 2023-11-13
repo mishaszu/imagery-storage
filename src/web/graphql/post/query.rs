@@ -23,15 +23,14 @@ impl PostQuery {
         let app_ctx = ctx.data_opt::<Ctx>();
         let user_account_id = match app_ctx {
             Some(ctx) => ctx.account_id,
-            None => return Err(GraphQLError::AuthError.into()),
+            None => return Err(GraphQLError::AccessError("No user logged in".to_string()).into()),
         };
 
-        let post =
-            PostBmc::get(mm, &post_id.into()).map_err(GraphQLError::from_model_to_graphql)?;
+        let post = PostBmc::get(mm, &post_id.into()).map_err(GraphQLError::ModelError)?;
 
         let access = post
             .user_access(mm, &user_account_id)
-            .map_err(GraphQLError::from_model_to_graphql)?;
+            .map_err(GraphQLError::ModelError)?;
 
         match (access, post.public_lvl) {
             //
@@ -59,11 +58,12 @@ impl PostQuery {
         };
 
         let posts = PostBmc::list(mm, user_account_id, &search_user_id)
-            .map_err(GraphQLError::from_model_to_graphql)?;
+            .map_err(GraphQLError::ModelError)?;
 
         Ok(posts.into_iter().map(|r| r.map(|r| r.into())).collect())
     }
 
+    /// get all posts - allowed only for admin
     #[graphql(guard = "RoleGuard::new(Role::Admin)")]
     async fn posts_all(&self, ctx: &Context<'_>) -> Result<Vec<Post>> {
         let mm = ctx.data_opt::<ModelManager>();
@@ -72,7 +72,7 @@ impl PostQuery {
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
 
-        let posts = PostBmc::list_admin(mm).map_err(GraphQLError::from_model_to_graphql)?;
+        let posts = PostBmc::list_admin(mm).map_err(GraphQLError::ModelError)?;
 
         Ok(posts.into_iter().map(|r| r.into()).collect())
     }

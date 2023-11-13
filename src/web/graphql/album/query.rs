@@ -18,7 +18,7 @@ impl AlbumQuery {
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
 
-        let album = AlbumBmc::get(mm, id.into()).map_err(GraphQLError::from_model_to_graphql)?;
+        let album = AlbumBmc::get(mm, id.into()).map_err(GraphQLError::ModelError)?;
         Ok(album.into())
     }
 
@@ -29,7 +29,7 @@ impl AlbumQuery {
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
 
-        let albums = AlbumBmc::list(mm).map_err(GraphQLError::from_model_to_graphql)?;
+        let albums = AlbumBmc::list(mm).map_err(GraphQLError::ModelError)?;
         Ok(albums.into_iter().map(|a| a.into()).collect())
     }
 }

@@ -16,8 +16,8 @@ impl ImageQuery {
             Some(mm) => mm,
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
-        let image = crate::model::image::ImageBmc::get(mm, id.0)
-            .map_err(GraphQLError::from_model_to_graphql)?;
+        let image =
+            crate::model::image::ImageBmc::get(mm, id.0).map_err(GraphQLError::ModelError)?;
         Ok(image.into())
     }
 
@@ -27,8 +27,7 @@ impl ImageQuery {
             Some(mm) => mm,
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
-        let images =
-            crate::model::image::ImageBmc::list(mm).map_err(GraphQLError::from_model_to_graphql)?;
+        let images = crate::model::image::ImageBmc::list(mm).map_err(GraphQLError::ModelError)?;
         Ok(images.into_iter().map(|r| r.into()).collect())
     }
 }

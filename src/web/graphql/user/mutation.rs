@@ -20,7 +20,7 @@ impl UserMutation {
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
         let create: crate::model::user::UserForCreate = input.into_db()?;
-        let user = UserBmc::create(mm, create).map_err(GraphQLError::from_model_to_graphql)?;
+        let user = UserBmc::create(mm, create).map_err(GraphQLError::ModelError)?;
         Ok(user.into())
     }
 
@@ -32,9 +32,9 @@ impl UserMutation {
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
 
-        let user = UserBmc::get(mm, &id.into()).map_err(GraphQLError::from_model_to_graphql)?;
+        let user = UserBmc::get(mm, &id.into()).map_err(GraphQLError::ModelError)?;
 
-        UserBmc::delete(mm, &user.id).map_err(GraphQLError::from_model_to_graphql)?;
+        UserBmc::delete(mm, &user.id).map_err(GraphQLError::ModelError)?;
 
         Ok(user.id.to_string())
     }
