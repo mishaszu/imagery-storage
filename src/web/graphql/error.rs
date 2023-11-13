@@ -1,6 +1,5 @@
 use std::fmt::Display;
 
-use derive_more::Display;
 use tracing::debug;
 
 use crate::model::error::Error as ModelError;

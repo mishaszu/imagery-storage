@@ -67,6 +67,7 @@ diesel::table! {
         id -> Uuid,
         user_id -> Uuid,
         name -> Nullable<Text>,
+        kind -> Text,
         path -> Uuid,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,

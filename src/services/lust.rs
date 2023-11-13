@@ -1,9 +1,11 @@
+use axum::{extract::BodyStream, response::IntoResponse};
 use bytes::Bytes;
+use derive_more::Display;
 use reqwest::{
     header::{CONTENT_LENGTH, CONTENT_TYPE},
-    Client, Url,
+    Body, Client, StatusCode, Url,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tracing::debug;
 
 use crate::config;
@@ -11,12 +13,30 @@ use crate::config;
 use super::error::{Error, Result};
 use super::req_client;
 
-#[derive(Deserialize)]
+#[derive(Debug, Display, Serialize)]
+pub enum LustError {
+    #[display(fmt = "Bad new image format")]
+    Post400BadFormat,
+    #[display(fmt = "Unauthorized")]
+    Post401Unauthorized,
+    #[display(fmt = "Bucket not found")]
+    Post404BucketNotFound,
+    #[display(fmt = "Payload too large")]
+    Post413PayloadTooLarge,
+    #[display(fmt = "Bad request, bucket: {}, image: {}", _0, _1)]
+    BadRequest(String, String),
+    #[display(fmt = "Not found, bucket: {}, image: {}", _0, _1)]
+    NotFound(String, String),
+    #[display(fmt = "Undefined error")]
+    Undefined,
+}
+
+#[derive(Deserialize, Serialize)]
 pub struct LustSizing {
     pub sizing_id: i32,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct LustResponse {
     pub image_id: String,
     pub processing_time: f64,
@@ -26,35 +46,105 @@ pub struct LustResponse {
     pub bucket_id: i64,
 }
 
+impl IntoResponse for LustResponse {
+    fn into_response(self) -> axum::response::Response {
+        let body = serde_json::to_string(&self).unwrap();
+        axum::response::IntoResponse::into_response(body)
+    }
+}
+
 pub struct Lust;
 
 impl Lust {
-    pub fn build_post_url(params: Option<Vec<(String, String)>>) -> Result<Url> {
-        let url = &config().LUST_URL;
-        req_client::build_url(url, params)
-    }
-
-    pub fn build_get_url(params: Option<Vec<(String, String)>>, image: String) -> Result<Url> {
-        let url = format!("{}/{}", &config().LUST_URL, image);
+    pub fn build_post_url(bucket: &str, params: Option<Vec<(String, String)>>) -> Result<Url> {
+        let url = format!("{}/{}", &config().LUST_URL, bucket);
         req_client::build_url(&url, params)
     }
 
-    pub async fn post_file(client: &Client, file: Vec<u8>) -> Result<LustResponse> {
-        let url = Self::build_post_url(Some(vec![("format".to_string(), "jpeg".to_string())]))?;
-        debug!("{:<12} - LUST creating file", "REDIRECT");
+    pub fn build_get_url(
+        bucket: &str,
+        params: Option<Vec<(String, String)>>,
+        image: &str,
+    ) -> Result<Url> {
+        let url = format!("{}/{}/{}", &config().LUST_URL, bucket, image);
+        req_client::build_url(&url, params)
+    }
+
+    pub async fn post_stream(
+        client: &Client,
+        bucket: &str,
+        size: u64,
+        file: BodyStream,
+    ) -> Result<LustResponse> {
+        let url = Self::build_post_url(
+            &bucket,
+            Some(vec![("format".to_string(), "jpeg".to_string())]),
+        )?;
+        debug!("{:<12} - LUST creating file", "LUST");
+        let body = Body::wrap_stream(file);
         let res = client
             .post(url)
             .header(CONTENT_TYPE, "application/octet-stream")
-            .header(CONTENT_LENGTH, file.len().to_string())
+            .header(CONTENT_LENGTH, size.to_string())
+            .body(body)
+            .send()
+            .await
+            .map_err(|e| e.into());
+
+        match res {
+            Ok(res) => match res.status() {
+                StatusCode::BAD_REQUEST => Err(LustError::Post400BadFormat.into()),
+                StatusCode::UNAUTHORIZED => Err(LustError::Post401Unauthorized.into()),
+                StatusCode::NOT_FOUND => Err(LustError::Post404BucketNotFound.into()),
+                StatusCode::PAYLOAD_TOO_LARGE => Err(LustError::Post413PayloadTooLarge.into()),
+                StatusCode::OK => res.json::<LustResponse>().await.map_err(|e| e.into()),
+                _ => {
+                    debug!(
+                        "{:<12} - LUST undefined error: {} for bucket: {}",
+                        "LUST",
+                        res.status(),
+                        bucket
+                    );
+                    Err(LustError::Undefined.into())
+                }
+            },
+            Err(e) => Err(e),
+        }
+    }
+
+    pub async fn post_file(client: &Client, bucket: &str, file: Vec<u8>) -> Result<LustResponse> {
+        let url = Self::build_post_url(
+            &bucket,
+            Some(vec![("format".to_string(), "jpeg".to_string())]),
+        )?;
+        debug!("{:<12} - LUST creating file", "LUST");
+        let size = file.len();
+        println!("url: {}, size: {}", url, size);
+        let res = client
+            .post(url)
+            .header(CONTENT_TYPE, "application/octet-stream")
+            .header(CONTENT_LENGTH, size.to_string())
             .body(file)
             .send()
             .await
             .map_err(|e| e.into());
 
         match res {
-            Ok(res) => match res.status().is_success() {
-                true => res.json::<LustResponse>().await.map_err(|e| e.into()),
-                false => Err(Error::LustResponse(res.status().to_string())),
+            Ok(res) => match res.status() {
+                StatusCode::BAD_REQUEST => Err(LustError::Post400BadFormat.into()),
+                StatusCode::UNAUTHORIZED => Err(LustError::Post401Unauthorized.into()),
+                StatusCode::NOT_FOUND => Err(LustError::Post404BucketNotFound.into()),
+                StatusCode::PAYLOAD_TOO_LARGE => Err(LustError::Post413PayloadTooLarge.into()),
+                StatusCode::OK => res.json::<LustResponse>().await.map_err(|e| e.into()),
+                _ => {
+                    debug!(
+                        "{:<12} - LUST undefined error: {} for bucket: {}",
+                        "LUST",
+                        res.status(),
+                        bucket
+                    );
+                    Err(LustError::Undefined.into())
+                }
             },
             Err(e) => Err(e),
         }
@@ -62,41 +152,66 @@ impl Lust {
 
     pub async fn get_file(
         client: &Client,
-        image_id: String,
+        bucket: &str,
+        image_id: &str,
         params: Option<Vec<(String, String)>>,
     ) -> Result<Bytes> {
-        let url = Self::build_get_url(params, image_id)?;
-        debug!("{:<12} - LUST getting file - {}", "REDIRECT", &url);
-        let res = client.get(url).send().await.map_err(|e| e.into());
+        let url = Self::build_get_url(&bucket, params, &image_id)?;
+        debug!("{:<12} - LUST getting file - {}", "LUST", &url);
+        let res = client
+            .get(url)
+            .send()
+            .await
+            .map_err(|e| Error::ReqwestFailed(e.to_string()))?;
 
-        match res {
-            Ok(res) => {
-                if res.status().is_success() {
-                    let file: Bytes = res.bytes().await.unwrap();
-                    Ok(file)
-                } else {
-                    let status = res.status().as_u16();
-                    Err(Error::LustBadStatus(status))
-                }
+        match res.status() {
+            StatusCode::OK => {
+                let file: Bytes = res.bytes().await.unwrap();
+                Ok(file)
             }
-            Err(e) => Err(Error::ReqwestFailed(e)),
+            StatusCode::NOT_FOUND => {
+                Err(LustError::NotFound(bucket.to_string(), image_id.to_string()).into())
+            }
+            StatusCode::BAD_REQUEST => {
+                Err(LustError::BadRequest(bucket.to_string(), image_id.to_string()).into())
+            }
+            _ => {
+                debug!(
+                    "{:<12} - LUST undefined error: {} for image: {}",
+                    "LUST",
+                    res.status(),
+                    image_id
+                );
+                Err(LustError::Undefined.into())
+            }
         }
     }
 
-    pub async fn delete_file(client: &Client, image_id: String) -> Result<()> {
-        let url = Self::build_get_url(None, image_id)?;
-        debug!("{:<12} - LUST deleting file", "REDIRECT");
-        let res = client.delete(url).send().await.map_err(|e| e.into());
+    pub async fn delete_file(client: &Client, bucket: String, image_id: String) -> Result<()> {
+        let url = Self::build_get_url(&bucket, None, &image_id)?;
+        debug!("{:<12} - LUST deleting file", "LUST");
+        let res = client
+            .delete(url)
+            .send()
+            .await
+            .map_err(|e| Error::ReqwestFailed(e.to_string()))?;
 
-        match res {
-            Ok(res) => match res.status().is_success() {
-                true => {
-                    debug!("{:<12} - LUST file deleted", "REDIRECT");
-                    Ok(())
-                }
-                false => Err(Error::LustResponse(res.status().to_string())),
-            },
-            Err(e) => Err(e),
+        match res.status() {
+            StatusCode::OK => {
+                debug!("{:<12} - LUST file deleted", "REDIRECT");
+                Ok(())
+            }
+            StatusCode::NOT_FOUND => Err(LustError::NotFound(bucket, image_id).into()),
+            StatusCode::BAD_REQUEST => Err(LustError::BadRequest(bucket, image_id).into()),
+            _ => {
+                debug!(
+                    "{:<12} - LUST undefined error: {} for image: {}",
+                    "LUST",
+                    res.status(),
+                    image_id
+                );
+                Err(LustError::Undefined.into())
+            }
         }
     }
 }

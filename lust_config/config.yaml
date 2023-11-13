@@ -14,15 +14,15 @@ buckets:
       gif: false  # Disable GIF encoding.
 
       webp_config:
-        quality: 100       # Set lossy quality to 80%
-        method: 6         # Opt on the side of performance slightly more than quality.
+        quality: 80       # Set lossy quality to 80%
+        method: 5         # Opt on the side of performance slightly more than quality.
         threading: true   # Enable multi-threaded encoding.
 
     default_serving_format: webp            # Serve the WebP format by default.
     default_serving_preset: small   # Use the "medium-square" sizing preset by default.
 
     global_cache:
-      max_images: 500    # At most cache 1000 images.
+      max_images: 100    # At most cache 1000 images.
     
     presets:
       medium:
@@ -48,7 +48,7 @@ buckets:
         threading: true   # Enable multi-threaded encoding.
 
     default_serving_format: webp            # Serve the WebP format by default.
-    default_serving_preset: null   # Use the "medium-square" sizing preset by default.
+    default_serving_preset: medium   # Use the "medium-square" sizing preset by default.
 
     global_cache:
       max_images: 500    # At most cache 1000 images.

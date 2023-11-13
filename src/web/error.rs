@@ -1,42 +1,35 @@
-use crate::web::middleware::CtxExtError;
+use crate::services::lust::LustError;
 use crate::{crypt, model, web};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde::Serialize;
 use tracing::debug;
 
+use crate::services::error::Error as ServiceError;
+
 pub type Result<T> = core::result::Result<T, Error>;
 
 #[derive(Debug, Serialize, strum_macros::AsRefStr)]
 #[serde(tag = "type", content = "data")]
 pub enum Error {
-    // -- Login
-    // LoginFailUsernameNotFound,
-    // LoginFailUserHasNoPwd { user_id: Uuid },
     LoginFailPwdNotMatching { user_id: String },
-    FailedToRedirect,
-    LustBadStatus(u16),
 
-    // -- CtxExtError
     CtxExt(web::middleware::CtxExtError),
 
-    // -- Modules
     Model(model::Error),
-    FailedToReadFile,
     Crypt(crypt::Error),
 
-    ServiceError(String),
+    ServiceError(ServiceError),
+    LustError(LustError),
 
-    // -- External Modules
     SerdeJson(String),
 
+    BadRequest(String),
+
     BadUuidFormat,
-    // EntityNotFound,
-    //
     AuthError,
 }
 
-// region:    --- Froms
 impl From<model::Error> for Error {
     fn from(val: model::Error) -> Self {
         Error::Model(val)
@@ -64,21 +57,31 @@ impl From<uuid::Error> for Error {
 impl From<crate::services::error::Error> for Error {
     fn from(val: crate::services::error::Error) -> Self {
         match val {
-            crate::services::error::Error::LustBadStatus(s) => Self::LustBadStatus(s),
-            _ => Self::ServiceError("Service error".to_string()),
+            crate::services::error::Error::LustError(e) => Self::LustError(e),
+            _ => Self::ServiceError(val),
         }
     }
 }
-// endregion: --- Froms
 
-// region:    --- Axum IntoResponse
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
         debug!("{:<12} - model::Error {self:?}", "INTO_RES");
 
         let mut response = match self {
-            Error::LustBadStatus(status) if status == 404 => StatusCode::NOT_FOUND.into_response(),
-            Error::LustBadStatus(status) if status == 400 => {
+            Error::LustError(LustError::Post400BadFormat) => {
+                StatusCode::BAD_REQUEST.into_response()
+            }
+            Error::LustError(LustError::Post401Unauthorized) => {
+                StatusCode::UNAUTHORIZED.into_response()
+            }
+            Error::LustError(LustError::Post404BucketNotFound) => {
+                StatusCode::NOT_FOUND.into_response()
+            }
+            Error::LustError(LustError::Post413PayloadTooLarge) => {
+                StatusCode::PAYLOAD_TOO_LARGE.into_response()
+            }
+            Error::LustError(LustError::NotFound(_, _)) => StatusCode::NOT_FOUND.into_response(),
+            Error::LustError(LustError::BadRequest(_, _)) => {
                 StatusCode::BAD_REQUEST.into_response()
             }
             Error::CtxExt(_) => StatusCode::UNAUTHORIZED.into_response(),
@@ -90,9 +93,7 @@ impl IntoResponse for Error {
         response
     }
 }
-// endregion: --- Axum IntoResponse
 
-// region:    --- Error Boilerplate
 impl core::fmt::Display for Error {
     fn fmt(&self, fmt: &mut core::fmt::Formatter) -> core::result::Result<(), core::fmt::Error> {
         write!(fmt, "{self:?}")

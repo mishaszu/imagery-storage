@@ -14,6 +14,8 @@ pub fn config() -> &'static Config {
 pub struct Config {
     pub DB_URL: String,
     pub LUST_URL: String,
+    pub LUST_PROFILE_BUCKET: String,
+    pub LUST_IMAGE_BUCKET: String,
     pub TOKEN_SECRET: Vec<u8>,
     pub PWD_KEY: Vec<u8>,
     pub TOKEN_DURATION: i64,
@@ -24,6 +26,8 @@ impl Config {
         Ok(Config {
             DB_URL: get_env("DATABASE_URL")?,
             LUST_URL: get_env("LUST_URL")?,
+            LUST_PROFILE_BUCKET: "profile".to_string(),
+            LUST_IMAGE_BUCKET: "imagery".to_string(),
             TOKEN_SECRET: get_env_b64u_as_u8s("TOKEN_SECRET")?,
             PWD_KEY: get_env_b64u_as_u8s("PWD_KEY")?,
             TOKEN_DURATION: get_env_parse("TOKEN_DURATION")?,

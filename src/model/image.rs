@@ -2,18 +2,20 @@ use diesel::prelude::*;
 use diesel::{
     query_builder::AsChangeset, ExpressionMethods, Identifiable, Insertable, Queryable, RunQueryDsl,
 };
+use serde::Serialize;
 use uuid::Uuid;
 
 use crate::schema::image;
 
 use super::Result;
 
-#[derive(Debug, Clone, PartialEq, Identifiable, Queryable)]
+#[derive(Debug, Clone, PartialEq, Identifiable, Queryable, Serialize)]
 #[diesel(table_name = image)]
 pub struct Image {
     pub id: Uuid,
     pub user_id: Uuid,
     pub name: Option<String>,
+    pub kind: String,
     pub path: Uuid,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
@@ -25,6 +27,7 @@ pub struct ImageForCreate {
     pub id: Uuid,
     pub user_id: Uuid,
     pub name: Option<String>,
+    pub kind: String,
     pub path: Uuid,
 }
 

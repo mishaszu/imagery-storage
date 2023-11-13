@@ -93,7 +93,7 @@ impl UserBmc {
                 let account = account::dsl::account
                     .filter(account::dsl::id.eq(account_id))
                     .first::<crate::model::account::Account>(&mut connection)?;
-                if (account.is_banned) {
+                if account.is_banned {
                     return Ok(vec![]);
                 }
 

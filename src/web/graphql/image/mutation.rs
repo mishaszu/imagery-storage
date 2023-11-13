@@ -49,7 +49,7 @@ impl ImageMutation {
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
         let image = ImageBmc::get(mm, id.0).map_err(GraphQLError::ModelError)?;
-        Lust::delete_file(client, image.path.to_string())
+        Lust::delete_file(client, image.kind.into(), image.path.to_string())
             .await
             .map_err(|e| -> Error { e.into() })?;
         ImageBmc::delete(mm, id.0).map_err(GraphQLError::ModelError)?;

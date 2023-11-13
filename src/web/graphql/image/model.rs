@@ -2,7 +2,10 @@ use async_graphql::{ComplexObject, InputObject, SimpleObject};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    graphql::scalars::{DateTime, Id},
+    graphql::{
+        scalars::{DateTime, Id},
+        ImageKind,
+    },
     model::image::ImageBmc,
 };
 
@@ -12,6 +15,7 @@ pub struct Image {
     pub id: Id,
     pub user_id: Id,
     pub name: Option<String>,
+    pub kind: ImageKind,
     pub path: Id,
     pub created_at: DateTime,
     pub updated_at: DateTime,
@@ -58,6 +62,7 @@ impl From<crate::model::image::Image> for Image {
             id: Id(image.id),
             user_id: Id(image.user_id),
             name: image.name,
+            kind: image.kind.into(),
             path: Id(image.path),
             created_at: image.created_at.into(),
             updated_at: image.updated_at.into(),
@@ -70,6 +75,7 @@ pub struct ImageForCreate {
     pub path: String,
     pub user_id: Id,
     pub name: Option<String>,
+    pub kind: ImageKind,
 }
 
 impl Into<crate::model::image::ImageForCreate> for ImageForCreate {
@@ -78,6 +84,7 @@ impl Into<crate::model::image::ImageForCreate> for ImageForCreate {
             id: uuid::Uuid::new_v4(),
             user_id: self.user_id.into(),
             name: self.name,
+            kind: self.kind.to_string(),
             path: self.path.parse().unwrap(),
         }
     }

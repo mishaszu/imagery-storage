@@ -1,7 +1,7 @@
 [env]
 DATABASE_URL="postgres://postgres:dev_only_pwd@localhost/imagery"
 RUST_LOG="imagery_storage=debug"
-LUST_URL="http://localhost:8000/v1/images/imagery"
+LUST_URL="http://localhost:8000/v1/images"
 
 PWD_KEY="CKUGFOD9_2Qf6Pn3ZFRYgPYb8ht4vKqEG9PGMXTB7497bT0367DjoaD6ydFnEVaIRda0kKeBZVCT5Hb62m2sCA"
 TOKEN_SECRET="9FoHBmkyxbgu_xFoQK7e0jz3RMNVJWgfvbVn712FBNH9LLaAWS3CS6Zpcg6RveiObvCUb6a2z-uAiLjhLh2igw"
