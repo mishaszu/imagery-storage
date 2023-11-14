@@ -1,6 +1,7 @@
 use async_graphql::{Context, Object, Result};
 
 use crate::ctx::Ctx;
+use crate::model::account::{Account, AccountBmc};
 use crate::model::ModelManager;
 use crate::web::graphql::error::Error as GraphQLError;
 
@@ -24,6 +25,13 @@ impl ImageQuery {
             Some(ctx) => ctx.user_id,
             None => return Err(GraphQLError::AccessError("No user logged in".to_string()).into()),
         };
+
+        let Account { is_banned, .. } =
+            AccountBmc::get_by_user_id(mm, &user_id).map_err(GraphQLError::ModelError)?;
+
+        if is_banned {
+            return Err(GraphQLError::AccessError("User is banned".to_string()).into());
+        }
 
         let images = crate::model::image::ImageBmc::list_user(mm, &user_id)
             .map_err(GraphQLError::ModelError)?;

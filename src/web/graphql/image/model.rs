@@ -6,6 +6,12 @@ use crate::graphql::{
     ImageKind,
 };
 
+/// ### Image
+/// Image is structure to hold path to image in lust server.\
+/// Lust image path can be fetch as static file by http get request:
+/// ```
+/// GET /api/image/{image_path}
+/// ```
 #[derive(Debug, Clone, Serialize, SimpleObject)]
 pub struct Image {
     pub id: Id,

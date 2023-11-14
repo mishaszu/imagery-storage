@@ -3,9 +3,11 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::crypt::pass::encrypt_pwd;
+use crate::ctx::Ctx;
 use crate::graphql::guard::{Role, RoleGuard};
 use crate::graphql::scalars::{DateTime, Id};
 use crate::model::account::AccountBmc;
+use crate::model::post::PostBmc;
 use crate::model::ModelManager;
 use crate::web::graphql::account::model::Account;
 use crate::web::graphql::error::Error as GraphQLError;
@@ -14,6 +16,7 @@ use crate::web::graphql::error::Error as GraphQLError;
 #[graphql(complex)]
 pub struct User {
     pub id: Id,
+    // TODO allow user access for owner
     /// user's email. Access only for admin
     #[graphql(guard = "RoleGuard::new(Role::Admin)")]
     pub email: String,
@@ -40,6 +43,25 @@ impl User {
             AccountBmc::get(mm, &self.account_id.into()).map_err(GraphQLError::ModelError)?;
 
         Ok(account.into())
+    }
+
+    pub async fn posts(
+        &self,
+        ctx: &Context<'_>,
+    ) -> Result<Vec<Option<crate::web::graphql::post::model::Post>>> {
+        let mm = ctx.data_opt::<ModelManager>();
+        let mm = match mm {
+            Some(mm) => mm,
+            None => return Err(GraphQLError::ModalManagerNotInContext.into()),
+        };
+
+        let user_id = ctx.data_opt::<Ctx>().map(|r| r.user_id);
+        let posts =
+            PostBmc::list(mm, user_id, &self.id.into()).map_err(GraphQLError::ModelError)?;
+
+        let posts = posts.into_iter().map(|r| r.map(|r| r.into())).collect();
+
+        Ok(posts)
     }
 }
 

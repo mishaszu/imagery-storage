@@ -1,6 +1,7 @@
 use async_graphql::{Context, Object, Result};
 
-use crate::graphql::guard::UserQueryGuard;
+use crate::graphql::guard::{Accessship, UserQueryGuard};
+use crate::model::account::AccountBmc;
 use crate::model::user::UserBmc;
 use crate::web::graphql::error::Error as GraphQLError;
 use crate::{graphql::scalars::Id, model::ModelManager};
@@ -12,7 +13,6 @@ pub struct UserQuery;
 
 #[Object]
 impl UserQuery {
-    #[graphql(guard = "UserQueryGuard::new(id)")]
     async fn user(&self, ctx: &Context<'_>, id: Id) -> Result<User> {
         let mm = ctx.data_opt::<ModelManager>();
         let mm = match mm {
@@ -20,9 +20,21 @@ impl UserQuery {
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
 
-        let user = UserBmc::get(mm, &id.into()).map_err(GraphQLError::ModelError)?;
+        let user_account_id = ctx.data_opt::<crate::ctx::Ctx>().map(|r| r.account_id);
 
-        Ok(user.into())
+        let access = AccountBmc::get_by_user_id(mm, &id.into())
+            .map_err(GraphQLError::ModelError)?
+            .has_access(mm, user_account_id)
+            .map_err(GraphQLError::ModelError)?;
+
+        match access {
+            Accessship::None => Err(GraphQLError::AuthError.into()),
+            _ => {
+                let user = UserBmc::get(mm, &id.into()).map_err(GraphQLError::ModelError)?;
+
+                Ok(user.into())
+            }
+        }
     }
 
     async fn self_user(&self, ctx: &Context<'_>) -> Result<UserSelf> {

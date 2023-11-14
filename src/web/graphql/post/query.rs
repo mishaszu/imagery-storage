@@ -29,7 +29,7 @@ impl PostQuery {
         let post = PostBmc::get(mm, &post_id.into()).map_err(GraphQLError::ModelError)?;
 
         let access = post
-            .user_access(mm, &user_account_id)
+            .user_access(mm, user_account_id)
             .map_err(GraphQLError::ModelError)?;
 
         match (access, post.public_lvl) {
@@ -52,8 +52,8 @@ impl PostQuery {
 
         let app_ctx = ctx.data_opt::<Ctx>();
         let (search_user_id, user_account_id) = match (user_id, app_ctx) {
-            (Some(user_id), Some(user)) => (user_id.into(), user.account_id),
-            (None, Some(user)) => (user.user_id.into(), user.account_id),
+            (Some(user_id), Some(user)) => (user_id.into(), Some(user.account_id)),
+            (None, Some(user)) => (user.user_id.into(), Some(user.account_id)),
             _ => return Ok(vec![]),
         };
 

@@ -3,7 +3,7 @@ use reqwest::Client;
 
 use crate::config;
 use crate::ctx::Ctx;
-use crate::graphql::guard::ImageCreatorGuard;
+use crate::graphql::guard::ResourceGuard;
 use crate::model::account::AccountBmc;
 use crate::model::image::ImageBmc;
 use crate::services::lust::Lust;
@@ -17,7 +17,7 @@ pub struct ImageMutation;
 
 #[Object]
 impl ImageMutation {
-    #[graphql(guard = "ImageCreatorGuard::new(id, false)")]
+    #[graphql(guard = "ResourceGuard::new_image(id, false)")]
     async fn update_image(
         &self,
         ctx: &Context<'_>,
@@ -33,7 +33,7 @@ impl ImageMutation {
         Ok(image.into())
     }
 
-    #[graphql(guard = "ImageCreatorGuard::new(id, true)")]
+    #[graphql(guard = "ResourceGuard::new_image(id, true)")]
     async fn delete_image(&self, ctx: &Context<'_>, id: Id) -> Result<ImageDeleteResult> {
         let client = ctx
             .data::<Client>()

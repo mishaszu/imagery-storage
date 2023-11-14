@@ -3,6 +3,7 @@ CREATE TABLE post (
   title VARCHAR(255) NOT NULL,
   body TEXT NOT NULL,
   user_id UUID NOT NULL,
+  add_to_feed BOOLEAN NOT NULL DEFAULT TRUE,
   disable_comments BOOLEAN NOT NULL DEFAULT FALSE,
   public_lvl INT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

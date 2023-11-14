@@ -39,7 +39,7 @@ impl Guard for UserQueryGuard {
             AccountBmc::get(mm, &self.id.into()).map_err(GraphQLError::ModelError)?;
 
         let has_access = user_account
-            .has_access(mm, user_account_id)
+            .has_access(mm, Some(user_account_id))
             .map_err(GraphQLError::ModelError)?;
 
         match has_access {

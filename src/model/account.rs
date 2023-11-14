@@ -156,7 +156,14 @@ impl AccountBmc {
 }
 
 impl Account {
-    fn compare_access(&self, mm: &ModelManager, account: Account) -> Result<Accessship> {
+    fn compare_access(&self, mm: &ModelManager, account: Option<Account>) -> Result<Accessship> {
+        let account = match (account, self.public_lvl) {
+            (Some(account), _) => account,
+            (None, 2) => return Ok(Accessship::AllowedPublic),
+            (None, 1) => return Ok(Accessship::DisallowedSubscriber),
+            _ => return Ok(Accessship::None),
+        };
+
         if account.is_admin {
             return Ok(Accessship::Admin);
         }
@@ -177,20 +184,24 @@ impl Account {
         }
     }
 
-    pub fn has_access(&self, mm: &ModelManager, account_id: Uuid) -> Result<Accessship> {
+    // check if passed user account id has access to self account
+    pub fn has_access(&self, mm: &ModelManager, account_id: Option<Uuid>) -> Result<Accessship> {
         let mut connection = mm.conn()?;
 
-        let user_account = account::dsl::account
-            .filter(account::dsl::id.eq(account_id))
-            .first::<Account>(&mut connection)?;
+        let user_account = account_id.and_then(|account_id| {
+            account::dsl::account
+                .filter(account::dsl::id.eq(account_id))
+                .first::<Account>(&mut connection)
+                .ok()
+        });
 
         self.compare_access(mm, user_account)
     }
 
-    pub fn has_user_access(&self, mm: &ModelManager, user_id: &Uuid) -> Result<Accessship> {
-        let mut connection = mm.conn()?;
-
-        let user_account = AccountBmc::get_by_user_id(mm, &user_id)?;
+    // check if passed user id has access to self account
+    pub fn has_user_access(&self, mm: &ModelManager, user_id: Option<Uuid>) -> Result<Accessship> {
+        let user_account =
+            user_id.and_then(|user_id| AccountBmc::get_by_user_id(mm, &user_id).ok());
 
         self.compare_access(mm, user_account)
     }

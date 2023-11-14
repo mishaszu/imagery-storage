@@ -17,6 +17,7 @@ pub struct Post {
     pub title: String,
     pub body: String,
     pub user_id: Uuid,
+    pub add_to_feed: bool,
     pub disable_comments: bool,
     pub public_lvl: i32,
     pub created_at: chrono::DateTime<chrono::Utc>,
@@ -30,6 +31,7 @@ pub struct PostForCreate {
     pub title: String,
     pub body: String,
     pub user_id: Uuid,
+    pub add_to_feed: Option<bool>,
     pub disable_comments: bool,
     pub public_lvl: i32,
 }
@@ -39,6 +41,7 @@ pub struct PostForCreate {
 pub struct PostForUpdate {
     pub title: Option<String>,
     pub body: Option<String>,
+    pub add_to_feed: Option<bool>,
     pub disable_comments: Option<bool>,
     pub public_lvl: Option<i32>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
@@ -132,7 +135,7 @@ impl PostBmc {
 
     pub fn list(
         mm: &ModelManager,
-        user_account_id: Uuid,
+        user_account_id: Option<Uuid>,
         target_user_id: &Uuid,
     ) -> Result<Vec<Option<Post>>> {
         let mut connection = mm.conn()?;
@@ -140,7 +143,7 @@ impl PostBmc {
         let target_account = AccountBmc::get(mm, target_user_id)?;
 
         let access_lvl: i32 = target_account
-            .has_user_access(mm, &user_account_id)?
+            .has_user_access(mm, user_account_id)?
             .try_into()?;
 
         let posts = post::dsl::post
@@ -150,7 +153,16 @@ impl PostBmc {
             .map(|posts: Vec<Post>| {
                 posts
                     .into_iter()
+                    .filter(|post| {
+                        // filter out all private post if user is subscriber or no user
+                        if access_lvl != 0 && post.public_lvl == 0 {
+                            false
+                        } else {
+                            true
+                        }
+                    })
                     .map(|post| {
+                        // for non sub and no user display only public posts and rest should be null
                         if post.public_lvl <= access_lvl {
                             Some(post)
                         } else {
@@ -188,9 +200,9 @@ impl PostBmc {
 }
 
 impl Post {
-    pub fn user_access(&self, mm: &ModelManager, user_id: &Uuid) -> Result<Accessship> {
+    pub fn user_access(&self, mm: &ModelManager, user_id: Uuid) -> Result<Accessship> {
         let account = AccountBmc::get_by_user_id(mm, &self.user_id)?;
-        let has_access = account.has_user_access(mm, user_id)?;
+        let has_access = account.has_user_access(mm, Some(user_id))?;
 
         Ok(has_access)
     }

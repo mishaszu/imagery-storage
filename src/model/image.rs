@@ -5,8 +5,10 @@ use diesel::{
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::schema::image;
+use crate::graphql::guard::HasAccess;
+use crate::schema::{image, post_image};
 
+use super::account::AccountBmc;
 use super::Result;
 
 #[derive(Debug, Clone, PartialEq, Identifiable, Queryable, Serialize)]
@@ -75,6 +77,17 @@ impl ImageBmc {
             .map_err(|e| -> crate::model::Error { e.into() })
     }
 
+    pub fn list_post(mm: &crate::model::ModelManager, post_id: &Uuid) -> Result<Vec<Image>> {
+        let mut connection = mm.conn()?;
+
+        image::dsl::image
+            .inner_join(post_image::dsl::post_image)
+            .filter(post_image::dsl::post_id.eq(post_id))
+            .select(image::all_columns)
+            .load::<Image>(&mut connection)
+            .map_err(|e| -> crate::model::Error { e.into() })
+    }
+
     pub fn update(
         mm: &crate::model::ModelManager,
         id: Uuid,
@@ -94,5 +107,33 @@ impl ImageBmc {
         diesel::delete(image::dsl::image.filter(image::dsl::id.eq(id)))
             .execute(&mut connection)
             .map_err(|e| -> crate::model::Error { e.into() })
+    }
+}
+
+impl HasAccess for ImageBmc {
+    fn is_allowed(
+        mm: &super::ModelManager,
+        allow_admin: bool,
+        resource_id: &Uuid,
+        user: &Uuid,
+    ) -> crate::model::error::Result<bool> {
+        let mut connection = mm.conn()?;
+
+        let account = AccountBmc::get_by_user_id(mm, user)?;
+
+        if account.is_banned {
+            return Err(crate::model::Error::AccessDenied);
+        }
+
+        if account.is_admin && allow_admin {
+            return Ok(true);
+        }
+
+        let query = image::dsl::image
+            .filter(image::dsl::id.eq(resource_id))
+            .filter(image::dsl::user_id.eq(user));
+
+        diesel::select(diesel::dsl::exists(query)).get_result::<bool>(&mut connection)?;
+        Ok(true)
     }
 }

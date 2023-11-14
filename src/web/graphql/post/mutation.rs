@@ -61,22 +61,6 @@ impl PostMutation {
     }
 
     #[graphql(guard = "CreatorGuard::new(post_id, true)")]
-    async fn delete_post_image(
-        &self,
-        ctx: &Context<'_>,
-        post_id: Id,
-        post_image_id: Id,
-    ) -> Result<String> {
-        let mm = ctx.data_opt::<ModelManager>();
-        let mm = match mm {
-            Some(mm) => mm,
-            None => return Ok("".to_string()),
-        };
-
-        todo!()
-    }
-
-    #[graphql(guard = "CreatorGuard::new(post_id, true)")]
     async fn delete_post(&self, ctx: &Context<'_>, post_id: Id) -> Result<String> {
         let mm = ctx.data_opt::<ModelManager>();
         let mm = match mm {

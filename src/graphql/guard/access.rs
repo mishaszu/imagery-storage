@@ -5,10 +5,11 @@ use crate::model::image::ImageBmc;
 use crate::web::graphql::error::Error as GraphQLError;
 use crate::{ctx::Ctx, graphql::scalars::Id, model::ModelManager};
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Clone)]
 pub enum Accessship {
     AllowedPublic,
     AllowedSubscriber,
+    DisallowedSubscriber,
     Admin,
     Owner,
     None,
@@ -20,6 +21,7 @@ impl TryInto<i32> for Accessship {
     fn try_into(self) -> Result<i32, Self::Error> {
         match self {
             Self::AllowedPublic => Ok(2),
+            Self::DisallowedSubscriber => Ok(2),
             Self::AllowedSubscriber => Ok(1),
             Self::Admin => Ok(0),
             Self::Owner => Ok(0),
@@ -63,7 +65,7 @@ impl Guard for CreatorGuard {
             .map_err(GraphQLError::ModelError)?;
 
         let has_access = post
-            .user_access(mm, &user_account_id)
+            .user_access(mm, user_account_id)
             .map_err(GraphQLError::ModelError)?;
 
         match (has_access, self.admin_allowed) {
