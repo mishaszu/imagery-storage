@@ -93,10 +93,7 @@ impl Lust {
         size: u64,
         file: BodyStream,
     ) -> Result<LustResponse> {
-        let url = Self::build_post_url(
-            &bucket,
-            Some(vec![("format".to_string(), "jpeg".to_string())]),
-        )?;
+        let url = Self::build_post_url(&bucket, None)?;
         debug!("{:<12} - LUST creating file", "LUST");
         let body = Body::wrap_stream(file);
         let res = client
