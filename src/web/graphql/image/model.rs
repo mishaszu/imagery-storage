@@ -1,16 +1,12 @@
-use async_graphql::{ComplexObject, InputObject, SimpleObject};
+use async_graphql::{InputObject, SimpleObject};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    graphql::{
-        scalars::{DateTime, Id},
-        ImageKind,
-    },
-    model::image::ImageBmc,
+use crate::graphql::{
+    scalars::{DateTime, Id},
+    ImageKind,
 };
 
 #[derive(Debug, Clone, Serialize, SimpleObject)]
-#[graphql(complex)]
 pub struct Image {
     pub id: Id,
     pub user_id: Id,
@@ -19,41 +15,6 @@ pub struct Image {
     pub path: Id,
     pub created_at: DateTime,
     pub updated_at: DateTime,
-}
-
-#[ComplexObject]
-impl Image {
-    // async fn tags(
-    //     &self,
-    //     ctx: &async_graphql::Context<'_>,
-    // ) -> async_graphql::Result<Vec<crate::web::api::graphql::tag::model::Tag>> {
-    //     let mm = ctx.data_opt::<crate::model::ModelManager>();
-    //     let mm = match mm {
-    //         Some(mm) => mm,
-    //         None => {
-    //             return Err(crate::web::api::graphql::error::Error::ModalManagerNotInContext.into())
-    //         }
-    //     };
-    //     let tags = ImageBmc::get_tags(mm, self.id.0)
-    //         .map_err(crate::web::api::graphql::error::Error::from_model_to_graphql)?;
-    //     Ok(tags.into_iter().map(|r| r.into()).collect())
-    // }
-
-    // async fn albums(
-    //     &self,
-    //     ctx: &async_graphql::Context<'_>,
-    // ) -> async_graphql::Result<Vec<crate::web::api::graphql::album::model::Album>> {
-    //     let mm = ctx.data_opt::<crate::model::ModelManager>();
-    //     let mm = match mm {
-    //         Some(mm) => mm,
-    //         None => {
-    //             return Err(crate::web::api::graphql::error::Error::ModalManagerNotInContext.into())
-    //         }
-    //     };
-    //     let albums = ImageBmc::get_albums(mm, self.id.0)
-    //         .map_err(crate::web::api::graphql::error::Error::from_model_to_graphql)?;
-    //     Ok(albums.into_iter().map(|r| r.into()).collect())
-    // }
 }
 
 impl From<crate::model::image::Image> for Image {
@@ -71,37 +32,40 @@ impl From<crate::model::image::Image> for Image {
 }
 
 #[derive(Debug, Clone, Deserialize, InputObject)]
-pub struct ImageForCreate {
-    pub path: String,
-    pub user_id: Id,
-    pub name: Option<String>,
-    pub kind: ImageKind,
-}
-
-impl Into<crate::model::image::ImageForCreate> for ImageForCreate {
-    fn into(self) -> crate::model::image::ImageForCreate {
-        crate::model::image::ImageForCreate {
-            id: uuid::Uuid::new_v4(),
-            user_id: self.user_id.into(),
-            name: self.name,
-            kind: self.kind.to_string(),
-            path: self.path.parse().unwrap(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Deserialize, InputObject)]
 pub struct ImageForUpdate {
     pub name: Option<String>,
-    pub path: Option<Id>,
 }
 
 impl Into<crate::model::image::ImageForUpdate> for ImageForUpdate {
     fn into(self) -> crate::model::image::ImageForUpdate {
         crate::model::image::ImageForUpdate {
             name: self.name,
-            path: self.path.map(|id| id.0),
             updated_at: chrono::Utc::now(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, SimpleObject)]
+pub struct ImageDeleteResult {
+    image_id: Id,
+    success: bool,
+    error: Option<String>,
+}
+
+impl ImageDeleteResult {
+    pub fn delete_success(image_id: Id) -> Self {
+        Self {
+            image_id,
+            success: true,
+            error: None,
+        }
+    }
+
+    pub fn delete_failure(image_id: Id, error: String) -> Self {
+        Self {
+            image_id,
+            success: false,
+            error: Some(error),
         }
     }
 }

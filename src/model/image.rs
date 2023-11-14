@@ -35,7 +35,6 @@ pub struct ImageForCreate {
 #[diesel(table_name = image)]
 pub struct ImageForUpdate {
     pub name: Option<String>,
-    pub path: Option<Uuid>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
@@ -50,7 +49,7 @@ impl ImageBmc {
             .map_err(|e| -> crate::model::Error { e.into() })
     }
 
-    pub fn get(mm: &crate::model::ModelManager, search_id: Uuid) -> Result<Image> {
+    pub fn get(mm: &crate::model::ModelManager, search_id: &Uuid) -> Result<Image> {
         let mut connection = mm.conn()?;
 
         image::dsl::image
@@ -94,20 +93,6 @@ impl ImageBmc {
 
         diesel::delete(image::dsl::image.filter(image::dsl::id.eq(id)))
             .execute(&mut connection)
-            .map_err(|e| -> crate::model::Error { e.into() })
-    }
-
-    pub fn delete_many(mm: &crate::model::ModelManager, ids: Vec<Uuid>) -> Result<()> {
-        let mut connection = mm.conn()?;
-
-        connection
-            .transaction(|connection| {
-                for id in ids.iter() {
-                    diesel::delete(image::dsl::image.filter(image::dsl::id.eq(id)))
-                        .execute(connection)?;
-                }
-                diesel::QueryResult::Ok(())
-            })
             .map_err(|e| -> crate::model::Error { e.into() })
     }
 }

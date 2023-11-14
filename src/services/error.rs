@@ -1,3 +1,4 @@
+use derive_more::Display;
 use serde::Serialize;
 use tracing::debug;
 
@@ -35,6 +36,16 @@ impl Into<async_graphql::Error> for Error {
                 async_graphql::Error::new(format!("Url parse error: {}", s))
             }
             Error::LustError(e) => async_graphql::Error::new(e.to_string()),
+        }
+    }
+}
+
+impl ToString for Error {
+    fn to_string(&self) -> String {
+        match self {
+            Error::ReqwestFailed(e) => format!("Reqwest error: {}", e),
+            Error::UrlParseFailed(s) => format!("Url parse error: {}", s),
+            Error::LustError(e) => e.to_string(),
         }
     }
 }

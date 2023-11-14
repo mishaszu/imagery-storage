@@ -7,7 +7,7 @@ use crate::model::post::PostBmc;
 use crate::model::ModelManager;
 use crate::web::graphql::error::Error as GraphQLError;
 
-use super::model::{Post, PostForCreate, PostForUpdate, PostImageForCreate};
+use super::model::{Post, PostForCreate, PostForUpdate};
 
 #[derive(Default)]
 pub struct PostMutation;

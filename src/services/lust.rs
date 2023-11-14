@@ -199,7 +199,7 @@ impl Lust {
         }
     }
 
-    pub async fn delete_file(client: &Client, bucket: String, image_id: String) -> Result<()> {
+    pub async fn delete_file(client: &Client, bucket: &str, image_id: String) -> Result<()> {
         let url = Self::build_get_url(&bucket, None, &image_id)?;
         debug!("{:<12} - LUST deleting file", "LUST");
         let res = client
@@ -213,8 +213,10 @@ impl Lust {
                 debug!("{:<12} - LUST file deleted", "REDIRECT");
                 Ok(())
             }
-            StatusCode::NOT_FOUND => Err(LustError::NotFound(bucket, image_id).into()),
-            StatusCode::BAD_REQUEST => Err(LustError::BadRequest(bucket, image_id).into()),
+            StatusCode::NOT_FOUND => Err(LustError::NotFound(bucket.to_string(), image_id).into()),
+            StatusCode::BAD_REQUEST => {
+                Err(LustError::BadRequest(bucket.to_string(), image_id).into())
+            }
             _ => {
                 debug!(
                     "{:<12} - LUST undefined error: {} for image: {}",

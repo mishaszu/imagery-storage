@@ -45,8 +45,8 @@ pub async fn graphql_handler(
 ) -> impl IntoResponse {
     let state = graph_ql_state;
     let builer_schema = match ctx {
-        Ok(ctx) => request.0.data(ctx),
-        Err(_) => request.0.data(ctx),
+        Ok(ctx) => request.0.data(ctx).data(state.reqwest_client),
+        Err(_) => request.0.data(state.reqwest_client),
     };
     let builder = state.schema.execute(builer_schema).await;
     let response = GraphQLResponse(builder.into());
