@@ -67,6 +67,15 @@ impl ImageBmc {
             .map_err(|e| -> crate::model::Error { e.into() })
     }
 
+    pub fn list_user(mm: &crate::model::ModelManager, user_id: &Uuid) -> Result<Vec<Image>> {
+        let mut connection = mm.conn()?;
+
+        image::dsl::image
+            .filter(image::dsl::user_id.eq(user_id))
+            .load::<Image>(&mut connection)
+            .map_err(|e| -> crate::model::Error { e.into() })
+    }
+
     pub fn update(
         mm: &crate::model::ModelManager,
         id: Uuid,
