@@ -25,6 +25,7 @@ pub enum Error {
     SerdeJson(String),
 
     BadRequest(String),
+    BadRequestReturn(String),
 
     BadUuidFormat,
     AuthError,
@@ -85,6 +86,7 @@ impl IntoResponse for Error {
                 StatusCode::BAD_REQUEST.into_response()
             }
             Error::CtxExt(_) => StatusCode::UNAUTHORIZED.into_response(),
+            Error::BadRequestReturn(ref e) => (StatusCode::BAD_REQUEST, e.clone()).into_response(),
             _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         };
 

@@ -35,7 +35,6 @@ impl ImageMutation {
 
     #[graphql(guard = "ImageCreatorGuard::new(id, true)")]
     async fn delete_image(&self, ctx: &Context<'_>, id: Id) -> Result<ImageDeleteResult> {
-        println!("id: {:?}", id);
         let client = ctx
             .data::<Client>()
             .map_err(|_| -> Error { GraphQLError::ClientNotInContext.into() })?;
@@ -44,7 +43,6 @@ impl ImageMutation {
             Some(mm) => mm,
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
-        println!("id: {:?}", id);
         let image = ImageBmc::get(mm, &id.into()).map_err(GraphQLError::ModelError)?;
         let lust_del_res = Lust::delete_file(client, &image.kind, image.path.to_string()).await;
         match lust_del_res {
@@ -75,13 +73,16 @@ impl ImageMutation {
             .map_err(|_| -> Error { GraphQLError::ClientNotInContext.into() })?;
 
         let (user_id, account_id) = ctx
-            .data::<&Ctx>()
+            .data::<Ctx>()
             .map(|ctx| (ctx.user_id, ctx.account_id))
             .map_err(|_| -> Error {
                 GraphQLError::AccessError("User not in context".to_string()).into()
             })?;
 
         let account = AccountBmc::get(mm, &account_id).map_err(GraphQLError::ModelError)?;
+        if account.is_banned {
+            return Err(GraphQLError::AccessError("Account is banned".to_string()).into());
+        }
         let is_admin = account.is_admin;
 
         let mut img_result: Vec<ImageDeleteResult> = Vec::new();

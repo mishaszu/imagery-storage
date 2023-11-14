@@ -67,16 +67,23 @@ pub async fn post_image(
 
     let account = AccountBmc::get(&mm, &user_account)?;
 
+    if account.is_banned {
+        return Err(Error::AuthError);
+    }
+
     match account.kind.as_str() {
         "creator" => (),
         _ => {
-            return Err(Error::BadRequest(
+            return Err(Error::BadRequestReturn(
                 "You must be a creator to upload images".to_string(),
             ))
         }
     }
 
     let size = content_length.0;
+    if size == 0 {
+        return Err(Error::BadRequestReturn("File size is 0".to_string()));
+    }
     let response = Lust::post_stream(&client, &config().LUST_IMAGE_BUCKET, size, file).await?;
 
     let image_id = response.image_id.parse()?;
