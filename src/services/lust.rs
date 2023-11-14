@@ -1,5 +1,4 @@
-use axum::{extract::BodyStream, response::IntoResponse};
-use bytes::Bytes;
+use axum::{body::StreamBody, extract::BodyStream, http::HeaderMap, response::IntoResponse};
 use derive_more::Display;
 use reqwest::{
     header::{CONTENT_LENGTH, CONTENT_TYPE},
@@ -44,6 +43,24 @@ pub struct LustResponse {
     pub checksum: i64,
     pub images: Vec<LustSizing>,
     pub bucket_id: i64,
+}
+
+enum LustResult {
+    Success,
+    Error(LustError),
+}
+
+impl From<StatusCode> for LustResult {
+    fn from(status: StatusCode) -> Self {
+        match status {
+            StatusCode::OK => LustResult::Success,
+            StatusCode::BAD_REQUEST => LustResult::Error(LustError::Post400BadFormat),
+            StatusCode::UNAUTHORIZED => LustResult::Error(LustError::Post401Unauthorized),
+            StatusCode::NOT_FOUND => LustResult::Error(LustError::Post404BucketNotFound),
+            StatusCode::PAYLOAD_TOO_LARGE => LustResult::Error(LustError::Post413PayloadTooLarge),
+            _ => LustResult::Error(LustError::Undefined),
+        }
+    }
 }
 
 impl IntoResponse for LustResponse {
@@ -92,13 +109,9 @@ impl Lust {
             .map_err(|e| e.into());
 
         match res {
-            Ok(res) => match res.status() {
-                StatusCode::BAD_REQUEST => Err(LustError::Post400BadFormat.into()),
-                StatusCode::UNAUTHORIZED => Err(LustError::Post401Unauthorized.into()),
-                StatusCode::NOT_FOUND => Err(LustError::Post404BucketNotFound.into()),
-                StatusCode::PAYLOAD_TOO_LARGE => Err(LustError::Post413PayloadTooLarge.into()),
-                StatusCode::OK => res.json::<LustResponse>().await.map_err(|e| e.into()),
-                _ => {
+            Ok(res) => match res.status().into() {
+                LustResult::Success => res.json::<LustResponse>().await.map_err(|e| e.into()),
+                LustResult::Error(LustError::Undefined) => {
                     debug!(
                         "{:<12} - LUST undefined error: {} for bucket: {}",
                         "LUST",
@@ -107,6 +120,7 @@ impl Lust {
                     );
                     Err(LustError::Undefined.into())
                 }
+                LustResult::Error(e) => Err(e.into()),
             },
             Err(e) => Err(e),
         }
@@ -130,13 +144,9 @@ impl Lust {
             .map_err(|e| e.into());
 
         match res {
-            Ok(res) => match res.status() {
-                StatusCode::BAD_REQUEST => Err(LustError::Post400BadFormat.into()),
-                StatusCode::UNAUTHORIZED => Err(LustError::Post401Unauthorized.into()),
-                StatusCode::NOT_FOUND => Err(LustError::Post404BucketNotFound.into()),
-                StatusCode::PAYLOAD_TOO_LARGE => Err(LustError::Post413PayloadTooLarge.into()),
-                StatusCode::OK => res.json::<LustResponse>().await.map_err(|e| e.into()),
-                _ => {
+            Ok(res) => match res.status().into() {
+                LustResult::Success => res.json::<LustResponse>().await.map_err(|e| e.into()),
+                LustResult::Error(LustError::Undefined) => {
                     debug!(
                         "{:<12} - LUST undefined error: {} for bucket: {}",
                         "LUST",
@@ -145,6 +155,7 @@ impl Lust {
                     );
                     Err(LustError::Undefined.into())
                 }
+                LustResult::Error(e) => Err(e.into()),
             },
             Err(e) => Err(e),
         }
@@ -155,7 +166,7 @@ impl Lust {
         bucket: &str,
         image_id: &str,
         params: Option<Vec<(String, String)>>,
-    ) -> Result<Bytes> {
+    ) -> Result<(impl IntoResponse, HeaderMap)> {
         let url = Self::build_get_url(&bucket, params, &image_id)?;
         debug!("{:<12} - LUST getting file - {}", "LUST", &url);
         let res = client
@@ -166,8 +177,9 @@ impl Lust {
 
         match res.status() {
             StatusCode::OK => {
-                let file: Bytes = res.bytes().await.unwrap();
-                Ok(file)
+                let headers = res.headers().clone();
+                let file_stream = StreamBody::new(res.bytes_stream());
+                Ok((file_stream, headers))
             }
             StatusCode::NOT_FOUND => {
                 Err(LustError::NotFound(bucket.to_string(), image_id.to_string()).into())

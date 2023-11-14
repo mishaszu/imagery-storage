@@ -1,6 +1,6 @@
 use axum::extract::{BodyStream, Multipart, Path, Query, State};
 use axum::headers::ContentLength;
-use axum::http::{header, HeaderMap};
+use axum::http::HeaderMap;
 use axum::response::IntoResponse;
 use axum::{Json, TypedHeader};
 use regex::Regex;
@@ -9,6 +9,7 @@ use serde::Deserialize;
 use crate::config;
 use crate::ctx::Ctx;
 use crate::graphql::ImageKind;
+use crate::model::account::AccountBmc;
 use crate::model::image::{Image as ModelImage, ImageBmc, ImageForCreate};
 use crate::services::lust::Lust;
 
@@ -34,7 +35,7 @@ pub async fn get_image(
         None => (),
     }
 
-    let response = Lust::get_file(
+    let (response, headers) = Lust::get_file(
         &client,
         &config().LUST_IMAGE_BUCKET,
         &image_id,
@@ -43,11 +44,12 @@ pub async fn get_image(
     .await?;
 
     let mut file = response.into_response();
-    let headers: &mut HeaderMap = file.headers_mut();
-    headers.insert(
-        header::CONTENT_TYPE,
-        header::HeaderValue::from_static("image/webp"),
-    );
+    let new_headers: &mut HeaderMap = file.headers_mut();
+    headers.into_iter().for_each(|(k, v)| {
+        if let Some(header_name) = k {
+            new_headers.insert(header_name, v);
+        }
+    });
 
     Ok(file)
 }
@@ -61,6 +63,18 @@ pub async fn post_image(
     let mm = context.mm;
     let client = context.reqwest_client;
     let user = ctx.user_id;
+    let user_account = ctx.account_id;
+
+    let account = AccountBmc::get(&mm, &user_account)?;
+
+    match account.kind.as_str() {
+        "creator" => (),
+        _ => {
+            return Err(Error::BadRequest(
+                "You must be a creator to upload images".to_string(),
+            ))
+        }
+    }
 
     let size = content_length.0;
     let response = Lust::post_stream(&client, &config().LUST_IMAGE_BUCKET, size, file).await?;
