@@ -2,10 +2,10 @@
 Imagery Storage
 
 ## Tech Stack:
-- Axum - BE framework
-- Diesel - PostgreSQL ORM
-- async-graphql - GraphQL library
-- request - for proxing requests to Lust
+- Axum
+- Diesel
+- async-graphql
+- request
 
 ## Design:
 user -> imagery -> lust
@@ -59,30 +59,47 @@ Roles:
 ### User
 - check if logged account is admin
 - check if logged account is bocked
-- check if logged account is owner
 - check if user is blocked
 - check if user is private
 ### Post
 - check if logged account is admin
 - check if logged account is bocked
-- check if logged account is owner
 - check if post user is blocked
 - check if post user is private
 - check if post is private
-- check if post is on feed [for getting user posts]
-- check if sub user account has referral for post user account [for getting user & album posts]
-- check if post user account & post are public [for getting user posts]
-- check if post user account & album & post are public [for getting album posts]
+- check if sub user account has referral for post user account
+- check if post user account & post are public
 ### Image
-- check if no user has access to image post
-- check if user has access to image post
-### Comment
-- check if no user has access to comment post
-- check if user has access to comment post
-- check if post allows comments
-### Fav
-- check if no user has access to fav post
-- check if user has access to fav post
-### Tag
-- check if no user has access to tag post
-- check if user has access to tag post
+- check if logged account is admin
+- check if logged account is bocked
+- check if image post user is blocked
+- check if image post user is private
+- check if image post is private
+- check if image sub user account has referral for post user account
+- check if image post user account & post are public
+
+## Access tree
+### idea:
+- add optional no graphql field to all graphql models with allowed access level for easier access propagation
+- add access to all get methods:
+    - if private and can't access return error
+    - if sub and no access return None
+- add access to all list methods to:
+    - to filter out all private if no access
+    - to return None for all sub or pub no access
+- all access checks should return structure to reduce DB calls
+    - if checking for user access should return user if has access
+    - if checking for album access should return album if has access
+    - if checking for post access should return post if has access
+    - if checking for image access should return image if has access
+- only admin / owner queries and mutations should have guards
+
+### flow: 
+- [admin] account -> user
+- [admin] user -> account
+-  user -> album -> posts -> image
+-  user -> posts[feed] -> image
+-  posts[all feeds] -> image
+-  post -> image
+
+
