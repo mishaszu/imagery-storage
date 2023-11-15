@@ -120,6 +120,7 @@ diesel::table! {
     sys_config (id) {
         id -> Uuid,
         allow_registration -> Bool,
+        single_user_feed -> Nullable<Uuid>,
     }
 }
 

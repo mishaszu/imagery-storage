@@ -1,6 +1,7 @@
 CREATE TABLE sys_config (  
   id UUID PRIMARY KEY,
-  allow_registration BOOLEAN NOT NULL DEFAULT FALSE
+  allow_registration BOOLEAN NOT NULL DEFAULT FALSE,
+  single_user_feed UUid
 );
 
 INSERT INTO

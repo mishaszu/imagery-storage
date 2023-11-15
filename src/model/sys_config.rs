@@ -10,12 +10,14 @@ use crate::schema::sys_config;
 pub struct SysConfig {
     id: Uuid,
     allow_registration: bool,
+    single_user_feed: Option<Uuid>,
 }
 
 #[derive(AsChangeset, Insertable)]
 #[diesel(table_name = sys_config)]
 pub struct SysConfigForUpdate {
     allow_registration: Option<bool>,
+    single_user_feed: Option<Uuid>,
 }
 
 pub struct SysConfigBmc;
