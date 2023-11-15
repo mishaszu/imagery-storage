@@ -25,6 +25,7 @@ pub enum Error {
     DbPoolConnectionFailed,
 
     AccessDenied,
+    AccessDeniedReturnNoInfo,
 
     EntityNotFound { entity: &'static str, id: Uuid },
 }

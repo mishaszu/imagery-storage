@@ -2,6 +2,7 @@ use async_graphql::{ComplexObject, Context, InputObject, SimpleObject};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::access::Accesship;
 use crate::graphql::guard::{Role, RoleGuard};
 use crate::graphql::scalars::{DateTime, Id, PublicLvl};
 use crate::model::account::AccountBmc;
@@ -22,6 +23,8 @@ pub struct Account {
     pub is_banned: bool,
     pub created_at: DateTime,
     pub updated_at: DateTime,
+    #[graphql(skip)]
+    pub access_lvl: Option<Accesship>,
 }
 
 #[ComplexObject]
@@ -61,6 +64,7 @@ impl From<crate::model::account::Account> for Account {
             is_banned: account.is_banned,
             created_at: account.created_at.into(),
             updated_at: account.updated_at.into(),
+            access_lvl: None,
         }
     }
 }

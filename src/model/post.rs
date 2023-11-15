@@ -4,7 +4,7 @@ use diesel::{
 };
 use uuid::Uuid;
 
-use crate::graphql::guard::Accessship;
+use crate::access::Accesship;
 use crate::schema::{post, post_image};
 
 use super::account::AccountBmc;
@@ -200,7 +200,7 @@ impl PostBmc {
 }
 
 impl Post {
-    pub fn user_access(&self, mm: &ModelManager, user_id: Uuid) -> Result<Accessship> {
+    pub fn user_access(&self, mm: &ModelManager, user_id: Uuid) -> Result<Accesship> {
         let account = AccountBmc::get_by_user_id(mm, &self.user_id)?;
         let has_access = account.has_user_access(mm, Some(user_id))?;
 

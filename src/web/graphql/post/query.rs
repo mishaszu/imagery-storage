@@ -1,7 +1,8 @@
 use async_graphql::{Context, Object, Result};
 
+use crate::access::Accesship;
 use crate::ctx::Ctx;
-use crate::graphql::guard::{Accessship, Role, RoleGuard};
+use crate::graphql::guard::{Role, RoleGuard};
 use crate::model::post::PostBmc;
 use crate::web::graphql::error::Error as GraphQLError;
 use crate::{graphql::scalars::Id, model::ModelManager};
@@ -34,11 +35,11 @@ impl PostQuery {
 
         match (access, post.public_lvl) {
             //
-            (Accessship::AllowedSubscriber, 1)
-            | (Accessship::AllowedSubscriber, 2)
-            | (Accessship::AllowedPublic, 2)
-            | (Accessship::Admin, _)
-            | (Accessship::Owner, _) => Ok(post.into()),
+            (Accesship::AllowedSubscriber, 1)
+            | (Accesship::AllowedSubscriber, 2)
+            | (Accesship::AllowedPublic, 2)
+            | (Accesship::Admin, _)
+            | (Accesship::Owner, _) => Ok(post.into()),
             _ => return Err(GraphQLError::AuthError.into()),
         }
     }

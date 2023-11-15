@@ -1,7 +1,6 @@
 use async_graphql::{Context, Object, Result};
 
-use crate::graphql::guard::{Accessship, UserQueryGuard};
-use crate::model::account::AccountBmc;
+use crate::access::ResourceAccess;
 use crate::model::user::UserBmc;
 use crate::web::graphql::error::Error as GraphQLError;
 use crate::{graphql::scalars::Id, model::ModelManager};
@@ -20,21 +19,12 @@ impl UserQuery {
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
 
-        let user_account_id = ctx.data_opt::<crate::ctx::Ctx>().map(|r| r.account_id);
+        let user_account_id = ctx.data_opt::<crate::ctx::Ctx>().map(|r| r.user_id);
 
-        let access = AccountBmc::get_by_user_id(mm, &id.into())
-            .map_err(GraphQLError::ModelError)?
-            .has_access(mm, user_account_id)
+        let user = UserBmc::has_access(mm, &id.into(), user_account_id)
             .map_err(GraphQLError::ModelError)?;
 
-        match access {
-            Accessship::None => Err(GraphQLError::AuthError.into()),
-            _ => {
-                let user = UserBmc::get(mm, &id.into()).map_err(GraphQLError::ModelError)?;
-
-                Ok(user.into())
-            }
-        }
+        Ok(user.try_into()?)
     }
 
     async fn self_user(&self, ctx: &Context<'_>) -> Result<UserSelf> {
@@ -44,15 +34,16 @@ impl UserQuery {
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
 
-        let user_id = ctx.data_opt::<crate::ctx::Ctx>().map(|r| r.user_id);
+        let user_account_id = ctx.data_opt::<crate::ctx::Ctx>();
+        let user_account_id = match user_account_id {
+            Some(user_account_id) => user_account_id.user_id,
+            None => return Err(GraphQLError::AuthError.into()),
+        };
 
-        match user_id {
-            Some(user_id) => {
-                let user = UserBmc::get(mm, &user_id).map_err(GraphQLError::ModelError)?;
-                Ok(user.into())
-            }
-            None => Err(GraphQLError::AuthError.into()),
-        }
+        let user = UserBmc::has_access(mm, &user_account_id, Some(user_account_id))
+            .map_err(GraphQLError::ModelError)?;
+
+        Ok(user.try_into()?)
     }
 
     async fn users(&self, ctx: &Context<'_>) -> Result<Vec<User>> {
@@ -64,8 +55,16 @@ impl UserQuery {
 
         let user_account_id = ctx.data_opt::<crate::ctx::Ctx>().map(|r| r.account_id);
 
-        let users = UserBmc::list(mm, user_account_id).map_err(GraphQLError::ModelError)?;
+        let users =
+            UserBmc::has_access_list(mm, user_account_id).map_err(GraphQLError::ModelError)?;
 
-        Ok(users.into_iter().map(|r| r.into()).collect())
+        let users = users
+            .into_iter()
+            .filter(|(_, user)| user.is_some())
+            .map(|(access, user)| (access, user.unwrap()))
+            .map(|r| r.into())
+            .collect::<Vec<User>>();
+
+        Ok(users)
     }
 }

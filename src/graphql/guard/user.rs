@@ -1,14 +1,13 @@
 use async_graphql::{Context, Guard, Result};
 use uuid::Uuid;
 
+use crate::access::Accesship;
 use crate::web::graphql::error::Error as GraphQLError;
 use crate::{
     ctx::Ctx,
     graphql::scalars::Id,
     model::{account::AccountBmc, ModelManager},
 };
-
-use super::Accessship;
 
 pub struct UserQueryGuard {
     id: Uuid,
@@ -43,7 +42,7 @@ impl Guard for UserQueryGuard {
             .map_err(GraphQLError::ModelError)?;
 
         match has_access {
-            Accessship::None => Err(GraphQLError::AccessError(user_account_id.to_string()).into()),
+            Accesship::None => Err(GraphQLError::AccessError(user_account_id.to_string()).into()),
             _ => Ok(()),
         }
     }

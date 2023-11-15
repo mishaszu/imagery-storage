@@ -2,6 +2,7 @@ use async_graphql::{ComplexObject, Context, InputObject, Result, SimpleObject};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::access::Accesship;
 use crate::crypt::pass::encrypt_pwd;
 use crate::ctx::Ctx;
 use crate::graphql::guard::{Role, RoleGuard};
@@ -26,6 +27,8 @@ pub struct User {
     pub account_id: Id,
     pub created_at: DateTime,
     pub updated_at: DateTime,
+    #[graphql(skip)]
+    pub access_lvl: Option<Accesship>,
 }
 
 #[ComplexObject]
@@ -45,28 +48,50 @@ impl User {
         Ok(account.into())
     }
 
-    pub async fn posts(
-        &self,
-        ctx: &Context<'_>,
-    ) -> Result<Vec<Option<crate::web::graphql::post::model::Post>>> {
-        let mm = ctx.data_opt::<ModelManager>();
-        let mm = match mm {
-            Some(mm) => mm,
-            None => return Err(GraphQLError::ModalManagerNotInContext.into()),
-        };
+    // pub async fn posts(
+    //     &self,
+    //     ctx: &Context<'_>,
+    // ) -> Result<Vec<Option<crate::web::graphql::post::model::Post>>> {
+    //     let mm = ctx.data_opt::<ModelManager>();
+    //     let mm = match mm {
+    //         Some(mm) => mm,
+    //         None => return Err(GraphQLError::ModalManagerNotInContext.into()),
+    //     };
 
-        let user_id = ctx.data_opt::<Ctx>().map(|r| r.user_id);
-        let posts =
-            PostBmc::list(mm, user_id, &self.id.into()).map_err(GraphQLError::ModelError)?;
+    //     let user_id = ctx.data_opt::<Ctx>().map(|r| r.user_id);
+    //     let posts =
+    //         PostBmc::list(mm, user_id, &self.id.into()).map_err(GraphQLError::ModelError)?;
 
-        let posts = posts.into_iter().map(|r| r.map(|r| r.into())).collect();
+    //     let posts = posts.into_iter().map(|r| r.map(|r| r.into())).collect();
 
-        Ok(posts)
+    //     Ok(posts)
+    // }
+}
+
+impl TryFrom<(Accesship, Option<crate::model::user::User>)> for User {
+    type Error = async_graphql::Error;
+    fn try_from(
+        value: (Accesship, Option<crate::model::user::User>),
+    ) -> std::prelude::v1::Result<Self, Self::Error> {
+        let (access, user) = value;
+        let user = user.ok_or_else(|| -> async_graphql::Error {
+            GraphQLError::AccessError("No user found".to_string()).into()
+        })?;
+
+        Ok(Self {
+            id: user.id.into(),
+            email: user.email,
+            nick: user.nick,
+            account_id: user.account_id.into(),
+            created_at: user.created_at.into(),
+            updated_at: user.updated_at.into(),
+            access_lvl: Some(access),
+        })
     }
 }
 
-impl From<crate::model::user::User> for User {
-    fn from(user: crate::model::user::User) -> Self {
+impl From<(Accesship, crate::model::user::User)> for User {
+    fn from((access, user): (Accesship, crate::model::user::User)) -> Self {
         Self {
             id: user.id.into(),
             email: user.email,
@@ -74,6 +99,7 @@ impl From<crate::model::user::User> for User {
             account_id: user.account_id.into(),
             created_at: user.created_at.into(),
             updated_at: user.updated_at.into(),
+            access_lvl: Some(access),
         }
     }
 }
@@ -85,17 +111,28 @@ pub struct UserSelf {
     pub nick: String,
     pub created_at: DateTime,
     pub updated_at: DateTime,
+    #[graphql(skip)]
+    pub access_lvl: Option<Accesship>,
 }
 
-impl From<crate::model::user::User> for UserSelf {
-    fn from(user: crate::model::user::User) -> Self {
-        Self {
+impl TryFrom<(Accesship, Option<crate::model::user::User>)> for UserSelf {
+    type Error = async_graphql::Error;
+    fn try_from(
+        value: (Accesship, Option<crate::model::user::User>),
+    ) -> std::prelude::v1::Result<Self, Self::Error> {
+        let (access, user) = value;
+        let user = user.ok_or_else(|| -> async_graphql::Error {
+            GraphQLError::AccessError("No user found".to_string()).into()
+        })?;
+
+        Ok(Self {
             id: user.id.into(),
             email: user.email,
             nick: user.nick,
             created_at: user.created_at.into(),
             updated_at: user.updated_at.into(),
-        }
+            access_lvl: Some(access),
+        })
     }
 }
 

@@ -2,7 +2,7 @@ use diesel::prelude::*;
 use uuid::Uuid;
 
 use crate::{
-    graphql::guard::Accessship,
+    access::Accesship,
     model::referral::Referral,
     schema::{account, referral, users},
 };
@@ -156,36 +156,42 @@ impl AccountBmc {
 }
 
 impl Account {
-    fn compare_access(&self, mm: &ModelManager, account: Option<Account>) -> Result<Accessship> {
-        let account = match (account, self.public_lvl) {
+    pub fn compare_access(&self, mm: &ModelManager, seeker_account: Option<Account>) -> Accesship {
+        let seeker_account = match (seeker_account, self.public_lvl) {
+            // if seeker has account proceed with check
             (Some(account), _) => account,
-            (None, 2) => return Ok(Accessship::AllowedPublic),
-            (None, 1) => return Ok(Accessship::DisallowedSubscriber),
-            _ => return Ok(Accessship::None),
+            // if seeker doesn't have account but account is public or sub
+            (None, 2) | (None, 1) => return Accesship::AllowedPublic,
+            // if seeker doesn't have account and account is private
+            _ => return Accesship::None,
         };
 
-        if account.is_admin {
-            return Ok(Accessship::Admin);
+        if seeker_account.is_admin {
+            return Accesship::Admin;
         }
 
-        if account.is_banned {
-            return Ok(Accessship::None);
+        if seeker_account.is_banned {
+            return Accesship::None;
         }
 
-        if account.id == self.id {
-            return Ok(Accessship::Owner);
+        if self.is_banned {
+            return Accesship::None;
         }
 
-        let has_refferal = account.has_refferal(mm, self.id)?;
+        if seeker_account.id == self.id {
+            return Accesship::Owner;
+        }
+
+        let has_refferal = seeker_account.has_refferal(mm, &self.id).is_ok();
         match (self.public_lvl, has_refferal) {
-            (2, _) => Ok(Accessship::AllowedPublic),
-            (lvl, true) if lvl > 0 => Ok(Accessship::AllowedSubscriber),
-            _ => Ok(Accessship::None),
+            (2, _) => Accesship::AllowedPublic,
+            (lvl, true) if lvl > 0 => Accesship::AllowedSubscriber,
+            _ => Accesship::None,
         }
     }
 
     // check if passed user account id has access to self account
-    pub fn has_access(&self, mm: &ModelManager, account_id: Option<Uuid>) -> Result<Accessship> {
+    pub fn has_access(&self, mm: &ModelManager, account_id: Option<Uuid>) -> Result<Accesship> {
         let mut connection = mm.conn()?;
 
         let user_account = account_id.and_then(|account_id| {
@@ -199,19 +205,19 @@ impl Account {
     }
 
     // check if passed user id has access to self account
-    pub fn has_user_access(&self, mm: &ModelManager, user_id: Option<Uuid>) -> Result<Accessship> {
+    pub fn has_user_access(&self, mm: &ModelManager, user_id: Option<Uuid>) -> Result<Accesship> {
         let user_account =
             user_id.and_then(|user_id| AccountBmc::get_by_user_id(mm, &user_id).ok());
 
         self.compare_access(mm, user_account)
     }
 
-    pub fn has_refferal(&self, mm: &ModelManager, account_id: Uuid) -> Result<bool> {
+    pub fn has_refferal(&self, mm: &ModelManager, target_account_id: &Uuid) -> Result<bool> {
         let mut connection = mm.conn()?;
 
         let has_refferal = referral::dsl::referral
-            .filter(referral::dsl::user_id.eq(account_id))
-            .filter(referral::dsl::referrer_id.eq(self.id))
+            .filter(referral::dsl::user_id.eq(&self.id))
+            .filter(referral::dsl::referrer_id.eq(target_account_id))
             .first::<Referral>(&mut connection)
             .is_ok();
 

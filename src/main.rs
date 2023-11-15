@@ -12,6 +12,7 @@ use self::web::graphql as graphql_routes;
 use self::web::middleware::mw_auth::mw_ctx_resolve;
 use self::web::routes_login;
 
+pub mod access;
 mod config;
 mod crypt;
 mod ctx;
