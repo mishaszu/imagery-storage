@@ -21,7 +21,7 @@ impl UserQuery {
 
         let user_account_id = ctx.data_opt::<crate::ctx::Ctx>().map(|r| r.user_id);
 
-        let user = UserBmc::has_access(mm, &id.into(), user_account_id)
+        let user = UserBmc::has_access(mm, &id.into(), user_account_id, ())
             .map_err(GraphQLError::ModelError)?;
 
         Ok(user.try_into()?)
@@ -40,7 +40,7 @@ impl UserQuery {
             None => return Err(GraphQLError::AuthError.into()),
         };
 
-        let user = UserBmc::has_access(mm, &user_account_id, Some(user_account_id))
+        let user = UserBmc::has_access(mm, &user_account_id, Some(user_account_id), ())
             .map_err(GraphQLError::ModelError)?;
 
         Ok(user.try_into()?)
@@ -55,8 +55,8 @@ impl UserQuery {
 
         let user_account_id = ctx.data_opt::<crate::ctx::Ctx>().map(|r| r.account_id);
 
-        let users =
-            UserBmc::has_access_list(mm, user_account_id).map_err(GraphQLError::ModelError)?;
+        let users = UserBmc::has_access_list(mm, user_account_id, (), ())
+            .map_err(GraphQLError::ModelError)?;
 
         let users = users
             .into_iter()

@@ -33,6 +33,12 @@ impl Into<uuid::Uuid> for Id {
     }
 }
 
+impl ToString for Id {
+    fn to_string(&self) -> String {
+        self.0.to_string()
+    }
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct DateTime(pub chrono::DateTime<chrono::Utc>);
 

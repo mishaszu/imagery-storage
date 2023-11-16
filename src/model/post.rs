@@ -4,10 +4,10 @@ use diesel::{
 };
 use uuid::Uuid;
 
-use crate::access::Accesship;
-use crate::schema::{post, post_image};
+use crate::access::{Accesship, ResourceAccess};
+use crate::schema::{account, post, post_image, users};
 
-use super::account::AccountBmc;
+use super::account::{Account, AccountBmc};
 use super::{ModelManager, Result};
 
 #[derive(Debug, Clone, PartialEq, Identifiable, Queryable)]
@@ -66,11 +66,14 @@ pub struct PostImageForCreate {
 pub struct PostBmc;
 
 impl PostBmc {
-    pub fn get(mm: &ModelManager, post_id: &Uuid) -> Result<Post> {
+    pub fn get(mm: &ModelManager, post_id: &Uuid) -> Result<(Post, Account)> {
         let mut connection = mm.conn()?;
         let post = post::dsl::post
             .filter(post::id.eq(post_id))
-            .first::<Post>(&mut connection)?;
+            .inner_join(users::dsl::users)
+            .inner_join(account::dsl::account.on(users::dsl::account_id.eq(account::dsl::id)))
+            .select((post::all_columns, account::all_columns))
+            .first::<(Post, Account)>(&mut connection)?;
 
         Ok(post)
     }
@@ -133,44 +136,13 @@ impl PostBmc {
         Ok(posts)
     }
 
-    pub fn list(
-        mm: &ModelManager,
-        user_account_id: Option<Uuid>,
-        target_user_id: &Uuid,
-    ) -> Result<Vec<Option<Post>>> {
+    pub fn list(mm: &ModelManager, user_id: &Uuid) -> Result<Vec<Post>> {
         let mut connection = mm.conn()?;
 
-        let target_account = AccountBmc::get(mm, target_user_id)?;
-
-        let access_lvl: i32 = target_account
-            .has_user_access(mm, user_account_id)?
-            .try_into()?;
-
         let posts = post::dsl::post
-            .filter(post::user_id.eq(target_user_id))
+            .filter(post::user_id.eq(user_id))
             .order(post::created_at.desc())
-            .load::<Post>(&mut connection)
-            .map(|posts: Vec<Post>| {
-                posts
-                    .into_iter()
-                    .filter(|post| {
-                        // filter out all private post if user is subscriber or no user
-                        if access_lvl != 0 && post.public_lvl == 0 {
-                            false
-                        } else {
-                            true
-                        }
-                    })
-                    .map(|post| {
-                        // for non sub and no user display only public posts and rest should be null
-                        if post.public_lvl <= access_lvl {
-                            Some(post)
-                        } else {
-                            None
-                        }
-                    })
-                    .collect::<Vec<Option<Post>>>()
-            })?;
+            .load::<Post>(&mut connection)?;
 
         Ok(posts)
     }
@@ -199,11 +171,74 @@ impl PostBmc {
     }
 }
 
-impl Post {
-    pub fn user_access(&self, mm: &ModelManager, user_id: Uuid) -> Result<Accesship> {
-        let account = AccountBmc::get_by_user_id(mm, &self.user_id)?;
-        let has_access = account.has_user_access(mm, Some(user_id))?;
+pub enum PostAccess {
+    Admin,
+    ToUser,
+    ToAlbum,
+}
 
-        Ok(has_access)
+impl ResourceAccess for PostBmc {
+    type Resource = Post;
+    type Filter = PostAccess;
+    type ExtraSearch = Uuid;
+
+    fn has_access(
+        mm: &crate::model::ModelManager,
+        // post id
+        target_resource_id: &Uuid,
+        seeker_user_id: Option<Uuid>,
+        _filter: Self::Filter,
+    ) -> crate::model::Result<(crate::access::Accesship, Option<Self::Resource>)> {
+        let seeker_account = seeker_user_id.and_then(|id| AccountBmc::get_by_user_id(mm, &id).ok());
+        let (target_post, target_account) = Self::get(mm, target_resource_id)?;
+
+        let access = target_account.compare_access(mm, seeker_account);
+
+        match (access, target_post.public_lvl) {
+            (Accesship::Admin, _) => Ok((access, Some(target_post))),
+            (Accesship::Owner, _) => Ok((access, Some(target_post))),
+            (Accesship::AllowedPublic, 2) => Ok((access, Some(target_post))),
+            (Accesship::AllowedPublic, 1) => Ok((access, None)),
+            (Accesship::AllowedSubscriber, lvl) if lvl > 0 => Ok((access, Some(target_post))),
+            _ => Err(crate::model::Error::AccessDeniedReturnNoInfo),
+        }
+    }
+
+    fn has_access_list(
+        mm: &crate::model::ModelManager,
+        seeker_user_id: Option<Uuid>,
+        extra_search_params: Self::ExtraSearch,
+        _filter: Self::Filter,
+    ) -> crate::model::Result<Vec<(crate::access::Accesship, Option<Self::Resource>)>> {
+        let seeker_account = seeker_user_id.and_then(|id| AccountBmc::get_by_user_id(mm, &id).ok());
+        let target_account = AccountBmc::get_by_user_id(mm, &extra_search_params)?;
+
+        let access = target_account.compare_access(mm, seeker_account);
+        let access_lvl: i32 = access.try_into()?;
+
+        let posts = Self::list(mm, &extra_search_params)?;
+
+        let filtered_posts = posts
+            .into_iter()
+            .filter(|post| {
+                // filter out all private post if user is subscriber or no user
+                if access_lvl != 0 && post.public_lvl == 0 {
+                    false
+                } else {
+                    true
+                }
+            })
+            .map(|post| {
+                // for non sub and no user display only public posts and rest should be null
+                if post.public_lvl <= access_lvl {
+                    Some(post)
+                } else {
+                    None
+                }
+            })
+            .map(|post| (access, post))
+            .collect::<Vec<(Accesship, Option<Post>)>>();
+
+        Ok(filtered_posts)
     }
 }

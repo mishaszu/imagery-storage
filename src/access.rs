@@ -20,21 +20,44 @@ impl TryInto<i32> for Accesship {
             Self::AllowedSubscriber => Ok(1),
             Self::Admin => Ok(0),
             Self::Owner => Ok(0),
-            Self::None => Err(crate::model::Error::AccessDenied),
+            Self::None => Err(crate::model::Error::AccessDeniedReturnNoInfo),
         }
     }
 }
 
+/// ResourceAccess is a trait that defines how to check access to a resource.
+/// Filter value is meant to be used to resource like post that can have either user access or album access
+/// ExtraSearch is meant to be used to search for a resource that is not the target resource, like searching for a post by user id
 pub trait ResourceAccess {
+    type ExtraSearch;
+    type Filter;
     type Resource;
+
     fn has_access(
         mm: &crate::model::ModelManager,
         target_resource_id: &Uuid,
         seeker_user_id: Option<Uuid>,
+        filter: Self::Filter,
     ) -> crate::model::Result<(Accesship, Option<Self::Resource>)>;
 
     fn has_access_list(
         mm: &crate::model::ModelManager,
         seeker_user_id: Option<Uuid>,
+        extra_search_params: Self::ExtraSearch,
+        filter: Self::Filter,
     ) -> crate::model::Result<Vec<(Accesship, Option<Self::Resource>)>>;
+
+    fn get_with_access(
+        mm: &crate::model::ModelManager,
+        target_resource_id: &Uuid,
+        access: Accesship,
+        filter: Self::Filter,
+    ) -> crate::model::Result<Option<Self::Resource>>;
+
+    /// if access is already stored in the resource, use this function
+    fn list_with_access(
+        mm: &crate::model::ModelManager,
+        extra_search_params: Self::ExtraSearch,
+        filter: Self::Filter,
+    ) -> crate::model::Result<Vec<Option<Self::Resource>>>;
 }

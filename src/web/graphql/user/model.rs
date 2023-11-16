@@ -68,6 +68,20 @@ impl User {
     // }
 }
 
+impl From<crate::model::user::User> for User {
+    fn from(user: crate::model::user::User) -> Self {
+        Self {
+            id: user.id.into(),
+            email: user.email,
+            nick: user.nick,
+            account_id: user.account_id.into(),
+            created_at: user.created_at.into(),
+            updated_at: user.updated_at.into(),
+            access_lvl: None,
+        }
+    }
+}
+
 impl TryFrom<(Accesship, Option<crate::model::user::User>)> for User {
     type Error = async_graphql::Error;
     fn try_from(

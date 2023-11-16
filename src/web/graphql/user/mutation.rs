@@ -1,6 +1,7 @@
 use async_graphql::{Context, Object, Result};
 
 use crate::graphql::guard::{Role, RoleGuard};
+use crate::model::account::AccountBmc;
 use crate::model::user::UserBmc;
 use crate::web::graphql::error::Error as GraphQLError;
 use crate::{graphql::scalars::Id, model::ModelManager};
@@ -32,10 +33,10 @@ impl UserMutation {
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
 
-        let user = UserBmc::get(mm, &id.into()).map_err(GraphQLError::ModelError)?;
+        let account = AccountBmc::get(mm, &id.into()).map_err(GraphQLError::ModelError)?;
 
-        UserBmc::delete(mm, &user.id).map_err(GraphQLError::ModelError)?;
+        AccountBmc::delete(mm, &account.id).map_err(GraphQLError::ModelError)?;
 
-        Ok(user.id.to_string())
+        Ok(format!("User {} deleted", id.to_string()))
     }
 }

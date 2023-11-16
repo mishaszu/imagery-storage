@@ -156,12 +156,15 @@ impl User {
 
 impl ResourceAccess for UserBmc {
     type Resource = User;
+    type Filter = ();
+    type ExtraSearch = ();
 
     fn has_access(
         mm: &crate::model::ModelManager,
         // user id
         target_resource_id: &Uuid,
         seeker_user_id: Option<Uuid>,
+        _filter: Self::Filter,
     ) -> crate::model::Result<(crate::access::Accesship, Option<Self::Resource>)> {
         let seeker_account = seeker_user_id.and_then(|id| AccountBmc::get_by_user_id(mm, &id).ok());
         let (target_user, target_account) = Self::get(mm, target_resource_id)?;
@@ -177,6 +180,8 @@ impl ResourceAccess for UserBmc {
     fn has_access_list(
         mm: &crate::model::ModelManager,
         seeker_user_id: Option<Uuid>,
+        _filter: Self::Filter,
+        _extra_search_params: Self::ExtraSearch,
     ) -> crate::model::Result<Vec<(crate::access::Accesship, Option<Self::Resource>)>> {
         let users = Self::list(mm)?;
 
