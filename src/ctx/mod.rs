@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct Ctx {
     pub user_id: Uuid,
     pub account_id: Uuid,
@@ -15,7 +15,6 @@ impl Ctx {
             account_id,
             name: name.to_string(),
             kind: kind.to_string(),
-            ..Default::default()
         }
     }
 }

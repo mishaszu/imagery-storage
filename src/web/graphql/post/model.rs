@@ -2,6 +2,7 @@ use async_graphql::{ComplexObject, Context, InputObject, SimpleObject};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::access::Accesship;
 use crate::web::graphql::error::Error as GraphQLError;
 use crate::{
     graphql::scalars::{DateTime, Id, PublicLvl},
@@ -24,6 +25,8 @@ pub struct Post {
     pub public_lvl: i32,
     pub created_at: DateTime,
     pub updated_at: DateTime,
+    #[graphql(skip)]
+    pub access: Accesship,
 }
 
 #[ComplexObject]
@@ -54,6 +57,7 @@ impl From<crate::model::post::Post> for Post {
             public_lvl: post.public_lvl,
             created_at: post.created_at.into(),
             updated_at: post.updated_at.into(),
+            access: Accesship::None,
         }
     }
 }

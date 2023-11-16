@@ -57,6 +57,7 @@ pub trait ResourceAccess {
     /// if access is already stored in the resource, use this function
     fn list_with_access(
         mm: &crate::model::ModelManager,
+        access: Accesship,
         extra_search_params: Self::ExtraSearch,
         filter: Self::Filter,
     ) -> crate::model::Result<Vec<Option<Self::Resource>>>;

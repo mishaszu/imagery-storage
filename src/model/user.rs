@@ -177,6 +177,20 @@ impl ResourceAccess for UserBmc {
         }
     }
 
+    fn get_with_access(
+        mm: &crate::model::ModelManager,
+        target_resource_id: &Uuid,
+        access: Accesship,
+        _filter: Self::Filter,
+    ) -> crate::model::Result<Option<Self::Resource>> {
+        let (target_user, _) = Self::get(mm, target_resource_id)?;
+
+        match access {
+            Accesship::None => Err(Error::AccessDeniedReturnNoInfo),
+            _ => Ok(Some(target_user)),
+        }
+    }
+
     fn has_access_list(
         mm: &crate::model::ModelManager,
         seeker_user_id: Option<Uuid>,
@@ -197,6 +211,26 @@ impl ResourceAccess for UserBmc {
                 }
             })
             .map(|(user, account)| (account.compare_access(mm, seeker_account), Some(user)))
+            .collect();
+
+        Ok(filtered_users)
+    }
+
+    fn list_with_access(
+        mm: &crate::model::ModelManager,
+        access: Accesship,
+        extra_search_params: Self::ExtraSearch,
+        filter: Self::Filter,
+    ) -> crate::model::Result<Vec<Option<Self::Resource>>> {
+        let users = Self::list(mm)?;
+
+        let filtered_users = users
+            .into_iter()
+            .filter(|(user, account)| match access {
+                Accesship::None => false,
+                _ => true,
+            })
+            .map(|(user, _)| Some(user))
             .collect();
 
         Ok(filtered_users)

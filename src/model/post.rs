@@ -171,6 +171,7 @@ impl PostBmc {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum PostAccess {
     Admin,
     ToUser,
@@ -187,19 +188,32 @@ impl ResourceAccess for PostBmc {
         // post id
         target_resource_id: &Uuid,
         seeker_user_id: Option<Uuid>,
-        _filter: Self::Filter,
+        filter: Self::Filter,
     ) -> crate::model::Result<(crate::access::Accesship, Option<Self::Resource>)> {
         let seeker_account = seeker_user_id.and_then(|id| AccountBmc::get_by_user_id(mm, &id).ok());
         let (target_post, target_account) = Self::get(mm, target_resource_id)?;
 
         let access = target_account.compare_access(mm, seeker_account);
 
+        let post = Self::get_with_access(mm, target_resource_id, access, filter)?;
+
+        Ok((access, post))
+    }
+
+    fn get_with_access(
+        mm: &crate::model::ModelManager,
+        target_resource_id: &Uuid,
+        access: Accesship,
+        _filter: Self::Filter,
+    ) -> crate::model::Result<Option<Self::Resource>> {
+        let (target_post, _) = Self::get(mm, target_resource_id)?;
+
         match (access, target_post.public_lvl) {
-            (Accesship::Admin, _) => Ok((access, Some(target_post))),
-            (Accesship::Owner, _) => Ok((access, Some(target_post))),
-            (Accesship::AllowedPublic, 2) => Ok((access, Some(target_post))),
-            (Accesship::AllowedPublic, 1) => Ok((access, None)),
-            (Accesship::AllowedSubscriber, lvl) if lvl > 0 => Ok((access, Some(target_post))),
+            (Accesship::Admin, _) => Ok(Some(target_post)),
+            (Accesship::Owner, _) => Ok(Some(target_post)),
+            (Accesship::AllowedPublic, 2) => Ok(Some(target_post)),
+            (Accesship::AllowedPublic, 1) => Ok(None),
+            (Accesship::AllowedSubscriber, lvl) if lvl > 0 => Ok(Some(target_post)),
             _ => Err(crate::model::Error::AccessDeniedReturnNoInfo),
         }
     }
@@ -208,12 +222,32 @@ impl ResourceAccess for PostBmc {
         mm: &crate::model::ModelManager,
         seeker_user_id: Option<Uuid>,
         extra_search_params: Self::ExtraSearch,
-        _filter: Self::Filter,
+        filter: Self::Filter,
     ) -> crate::model::Result<Vec<(crate::access::Accesship, Option<Self::Resource>)>> {
         let seeker_account = seeker_user_id.and_then(|id| AccountBmc::get_by_user_id(mm, &id).ok());
         let target_account = AccountBmc::get_by_user_id(mm, &extra_search_params)?;
 
         let access = target_account.compare_access(mm, seeker_account);
+        let access_lvl: i32 = access.try_into()?;
+
+        let posts = Self::list(mm, &extra_search_params)?;
+
+        let filtered_posts = Self::list_with_access(mm, access, extra_search_params, filter)?;
+
+        let filtered_posts = filtered_posts
+            .into_iter()
+            .map(|post| (access, post))
+            .collect();
+
+        Ok(filtered_posts)
+    }
+
+    fn list_with_access(
+        mm: &crate::model::ModelManager,
+        access: Accesship,
+        extra_search_params: Self::ExtraSearch,
+        filter: Self::Filter,
+    ) -> crate::model::Result<Vec<Option<Self::Resource>>> {
         let access_lvl: i32 = access.try_into()?;
 
         let posts = Self::list(mm, &extra_search_params)?;
@@ -228,6 +262,18 @@ impl ResourceAccess for PostBmc {
                     true
                 }
             })
+            .filter(|post| {
+                if post.add_to_feed && filter == PostAccess::ToUser {
+                    true
+                // Album filter should check if post is added to album
+                } else if !post.add_to_feed && filter == PostAccess::ToAlbum {
+                    true
+                } else if filter == PostAccess::Admin && access_lvl == 0 {
+                    true
+                } else {
+                    false
+                }
+            })
             .map(|post| {
                 // for non sub and no user display only public posts and rest should be null
                 if post.public_lvl <= access_lvl {
@@ -236,8 +282,7 @@ impl ResourceAccess for PostBmc {
                     None
                 }
             })
-            .map(|post| (access, post))
-            .collect::<Vec<(Accesship, Option<Post>)>>();
+            .collect::<Vec<Option<Post>>>();
 
         Ok(filtered_posts)
     }
