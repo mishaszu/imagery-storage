@@ -5,9 +5,10 @@ use diesel::{
 use uuid::Uuid;
 
 use crate::access::{Accesship, ResourceAccess};
-use crate::schema::{account, post, post_image, users};
+use crate::schema::{account, album_post, post, post_image, users};
 
 use super::account::{Account, AccountBmc};
+use super::album::AlbumBmc;
 use super::{ModelManager, Result};
 
 #[derive(Debug, Clone, PartialEq, Identifiable, Queryable)]
@@ -136,15 +137,31 @@ impl PostBmc {
         Ok(posts)
     }
 
-    pub fn list(mm: &ModelManager, user_id: &Uuid) -> Result<Vec<Post>> {
+    pub fn list(mm: &ModelManager, post_access: PostAccess) -> Result<Vec<Post>> {
         let mut connection = mm.conn()?;
 
-        let posts = post::dsl::post
-            .filter(post::user_id.eq(user_id))
-            .order(post::created_at.desc())
-            .load::<Post>(&mut connection)?;
+        match post_access {
+            PostAccess::ToUser(user_id) => {
+                let posts = post::dsl::post
+                    .filter(post::user_id.eq(user_id))
+                    .order(post::created_at.desc())
+                    .load::<Post>(&mut connection)?;
 
-        Ok(posts)
+                Ok(posts)
+            }
+            PostAccess::ToAlbum(album_id) => {
+                let posts = post::dsl::post
+                    .inner_join(
+                        album_post::dsl::album_post.on(post::dsl::id.eq(album_post::dsl::post_id)),
+                    )
+                    .filter(album_post::dsl::album_id.eq(album_id))
+                    .order(post::created_at.desc())
+                    .select(post::all_columns)
+                    .load::<Post>(&mut connection)?;
+
+                Ok(posts)
+            }
+        }
     }
 
     pub fn delete_post_image(
@@ -173,38 +190,63 @@ impl PostBmc {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PostAccess {
-    Admin,
-    ToUser,
-    ToAlbum,
+    ToUser(Uuid),
+    ToAlbum(Uuid),
 }
 
 impl ResourceAccess for PostBmc {
     type Resource = Post;
-    type Filter = PostAccess;
-    type ExtraSearch = Uuid;
+    type ExtraSearch = PostAccess;
 
+    /// User should be able to see post if:
+    /// 1. User is admin
+    /// 2. User is owner of the post
+    /// 3. If owner, post and album level match user access level
     fn has_access(
         mm: &crate::model::ModelManager,
         // post id
         target_resource_id: &Uuid,
         seeker_user_id: Option<Uuid>,
-        filter: Self::Filter,
     ) -> crate::model::Result<(crate::access::Accesship, Option<Self::Resource>)> {
         let seeker_account = seeker_user_id.and_then(|id| AccountBmc::get_by_user_id(mm, &id).ok());
         let (target_post, target_account) = Self::get(mm, target_resource_id)?;
 
         let access = target_account.compare_access(mm, seeker_account);
 
-        let post = Self::get_with_access(mm, target_resource_id, access, filter)?;
+        let post = Self::get_with_access(mm, target_resource_id, access)?;
 
-        Ok((access, post))
+        if access == Accesship::Admin || access == Accesship::Owner {
+            return Ok((access, post));
+        }
+
+        let post = match post {
+            Some(post) => match post.add_to_feed {
+                true => return Ok((access, Some(post))),
+                false => post,
+            },
+            None => return Ok((access, None)),
+        };
+
+        let album_access = AlbumBmc::post_albums_access(mm, &post.id)?
+            .into_iter()
+            .find(|a| match (a, access) {
+                (a1, a2) if *a1 >= a2 => true,
+                (Accesship::AllowedSubscriber, Accesship::AllowedPublic) => true,
+                _ => false,
+            })
+            .ok_or(crate::model::Error::AccessDeniedReturnNoInfo)?;
+
+        match (album_access, access) {
+            (a1, a2) if a1 >= a2 => Ok((access, Some(post))),
+            (Accesship::AllowedSubscriber, Accesship::AllowedPublic) => Ok((access, None)),
+            _ => Err(crate::model::Error::AccessDeniedReturnNoInfo),
+        }
     }
 
     fn get_with_access(
         mm: &crate::model::ModelManager,
         target_resource_id: &Uuid,
         access: Accesship,
-        _filter: Self::Filter,
     ) -> crate::model::Result<Option<Self::Resource>> {
         let (target_post, _) = Self::get(mm, target_resource_id)?;
 
@@ -221,18 +263,20 @@ impl ResourceAccess for PostBmc {
     fn has_access_list(
         mm: &crate::model::ModelManager,
         seeker_user_id: Option<Uuid>,
-        extra_search_params: Self::ExtraSearch,
-        filter: Self::Filter,
+        // target user id or album id
+        extra_search_param: Self::ExtraSearch,
     ) -> crate::model::Result<Vec<(crate::access::Accesship, Option<Self::Resource>)>> {
         let seeker_account = seeker_user_id.and_then(|id| AccountBmc::get_by_user_id(mm, &id).ok());
-        let target_account = AccountBmc::get_by_user_id(mm, &extra_search_params)?;
+
+        let target_account = match extra_search_param {
+            PostAccess::ToUser(user_id) => AccountBmc::get_by_user_id(mm, &user_id)?,
+            PostAccess::ToAlbum(album_id) => AccountBmc::get_by_album_id(mm, &album_id)?,
+        };
 
         let access = target_account.compare_access(mm, seeker_account);
         let access_lvl: i32 = access.try_into()?;
 
-        let posts = Self::list(mm, &extra_search_params)?;
-
-        let filtered_posts = Self::list_with_access(mm, access, extra_search_params, filter)?;
+        let filtered_posts = Self::list_with_access(mm, access, extra_search_param)?;
 
         let filtered_posts = filtered_posts
             .into_iter()
@@ -245,44 +289,58 @@ impl ResourceAccess for PostBmc {
     fn list_with_access(
         mm: &crate::model::ModelManager,
         access: Accesship,
+        // target user id
         extra_search_params: Self::ExtraSearch,
-        filter: Self::Filter,
     ) -> crate::model::Result<Vec<Option<Self::Resource>>> {
         let access_lvl: i32 = access.try_into()?;
 
-        let posts = Self::list(mm, &extra_search_params)?;
+        let posts = Self::list(mm, extra_search_params)?;
 
-        let filtered_posts = posts
-            .into_iter()
-            .filter(|post| {
-                // filter out all private post if user is subscriber or no user
-                if access_lvl != 0 && post.public_lvl == 0 {
-                    false
-                } else {
-                    true
-                }
-            })
-            .filter(|post| {
-                if post.add_to_feed && filter == PostAccess::ToUser {
-                    true
-                // Album filter should check if post is added to album
-                } else if !post.add_to_feed && filter == PostAccess::ToAlbum {
-                    true
-                } else if filter == PostAccess::Admin && access_lvl == 0 {
-                    true
-                } else {
-                    false
-                }
-            })
-            .map(|post| {
-                // for non sub and no user display only public posts and rest should be null
-                if post.public_lvl <= access_lvl {
-                    Some(post)
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<Option<Post>>>();
+        let filtered_posts_iter = posts.into_iter().filter(|post| {
+            // filter out all private post if user is subscriber or no user
+            if access_lvl != 0 && post.public_lvl == 0 {
+                false
+            } else {
+                true
+            }
+        });
+
+        let filtered_posts = match extra_search_params {
+            PostAccess::ToUser(_) => filtered_posts_iter
+                .filter(|post| post.add_to_feed)
+                .map(|post| {
+                    // for non sub and no user display only public posts and rest should be null
+                    if post.public_lvl >= access_lvl {
+                        Some(post)
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<Option<Post>>>(),
+            PostAccess::ToAlbum(album_id) => {
+                let album_access = AlbumBmc::get_access(mm, &album_id).unwrap_or(Accesship::None);
+                filtered_posts_iter
+                    .map(|post| (album_access, post))
+                    .filter(|(album_access, post)| {
+                        // filter out all private post if user is subscriber or no user
+                        let album_access_lvl: i32 = album_access.clone().try_into().unwrap_or(3);
+                        if access_lvl != 0 && album_access_lvl == 0 {
+                            false
+                        } else {
+                            true
+                        }
+                    })
+                    .map(|(album_access, post)| {
+                        let album_access_lvl: i32 = album_access.clone().try_into().unwrap_or(3);
+                        if post.public_lvl >= access_lvl && album_access_lvl >= access_lvl {
+                            Some(post)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<Vec<Option<Post>>>()
+            }
+        };
 
         Ok(filtered_posts)
     }

@@ -26,7 +26,7 @@ pub struct Post {
     pub created_at: DateTime,
     pub updated_at: DateTime,
     #[graphql(skip)]
-    pub access: Accesship,
+    pub access: Option<Accesship>,
 }
 
 #[ComplexObject]
@@ -45,6 +45,47 @@ impl Post {
     }
 }
 
+impl Post {
+    pub fn from_db_with_access(post: crate::model::post::Post, access: Accesship) -> Self {
+        Self {
+            id: post.id.into(),
+            title: post.title,
+            body: post.body,
+            user_id: post.user_id.into(),
+            add_to_feed: post.add_to_feed,
+            disable_comments: post.disable_comments,
+            public_lvl: post.public_lvl,
+            created_at: post.created_at.into(),
+            updated_at: post.updated_at.into(),
+            access: Some(access),
+        }
+    }
+}
+
+impl TryFrom<(Accesship, Option<crate::model::post::Post>)> for Post {
+    type Error = GraphQLError;
+    fn try_from(value: (Accesship, Option<crate::model::post::Post>)) -> Result<Self, Self::Error> {
+        let (access, post) = value;
+        let post = match post {
+            Some(post) => post,
+            None => return Err(GraphQLError::AuthError.into()),
+        };
+
+        Ok(Self {
+            id: post.id.into(),
+            title: post.title,
+            body: post.body,
+            user_id: post.user_id.into(),
+            add_to_feed: post.add_to_feed,
+            disable_comments: post.disable_comments,
+            public_lvl: post.public_lvl,
+            created_at: post.created_at.into(),
+            updated_at: post.updated_at.into(),
+            access: Some(access),
+        })
+    }
+}
+
 impl From<crate::model::post::Post> for Post {
     fn from(post: crate::model::post::Post) -> Self {
         Self {
@@ -57,7 +98,7 @@ impl From<crate::model::post::Post> for Post {
             public_lvl: post.public_lvl,
             created_at: post.created_at.into(),
             updated_at: post.updated_at.into(),
-            access: Accesship::None,
+            access: None,
         }
     }
 }

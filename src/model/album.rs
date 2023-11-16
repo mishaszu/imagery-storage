@@ -1,9 +1,12 @@
 use diesel::prelude::*;
 use uuid::Uuid;
 
-use super::{post::Post, ModelManager, Result};
+use super::{post::Post, Error, ModelManager, Result};
 
-use crate::schema::{album, album_post, post};
+use crate::{
+    access::Accesship,
+    schema::{album, album_post, post},
+};
 
 #[derive(Debug, Clone, PartialEq, Identifiable, Queryable)]
 #[diesel(table_name = album)]
@@ -76,6 +79,17 @@ impl AlbumBmc {
             .map_err(|e| e.into())
     }
 
+    pub fn get_access(mm: &ModelManager, id: &Uuid) -> Result<Accesship> {
+        let mut connection = mm.conn()?;
+
+        album::dsl::album
+            .filter(album::dsl::id.eq(id))
+            .select(album::dsl::public_lvl)
+            .first::<i32>(&mut connection)
+            .map(|r| r.into())
+            .map_err(|e| e.into())
+    }
+
     pub fn list(mm: &ModelManager) -> Result<Vec<Album>> {
         let mut connection = mm.conn()?;
 
@@ -127,5 +141,35 @@ impl AlbumBmc {
             .select(post::all_columns)
             .load::<Post>(&mut connection)
             .map_err(|e| e.into())
+    }
+
+    pub fn post_albums_access(mm: &ModelManager, post_id: &Uuid) -> Result<Vec<Accesship>> {
+        let mut connection = mm.conn()?;
+
+        let lvl = album_post::dsl::album_post
+            .filter(album_post::dsl::post_id.eq(post_id))
+            .inner_join(album::dsl::album)
+            .select(album::dsl::public_lvl)
+            .load::<i32>(&mut connection)
+            .map_err(|e| -> Error { e.into() })?;
+
+        Ok(lvl.into_iter().map(|r| r.into()).collect())
+    }
+
+    pub fn post_album_access(
+        mm: &ModelManager,
+        album_id: &Uuid,
+        post_id: &Uuid,
+    ) -> Result<Accesship> {
+        let mut connection = mm.conn()?;
+
+        album_post::dsl::album_post
+            .filter(album_post::dsl::post_id.eq(post_id))
+            .inner_join(album::dsl::album)
+            .filter(album_post::dsl::album_id.eq(album_id))
+            .select(album::dsl::public_lvl)
+            .first::<i32>(&mut connection)
+            .map(|r| r.into())
+            .map_err(|e| -> Error { e.into() })
     }
 }

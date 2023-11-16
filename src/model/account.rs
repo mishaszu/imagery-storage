@@ -4,7 +4,7 @@ use uuid::Uuid;
 use crate::{
     access::Accesship,
     model::referral::Referral,
-    schema::{account, referral, users},
+    schema::{account, album, referral, users},
 };
 
 use super::{referral::ReferralForCreate, ModelManager, Result};
@@ -114,6 +114,17 @@ impl AccountBmc {
             .map_err(|e| e.into())
     }
 
+    pub fn get_by_album_id(mm: &ModelManager, album_id: &Uuid) -> Result<Account> {
+        let mut connection = mm.conn()?;
+
+        album::dsl::album
+            .filter(album::dsl::id.eq(album_id))
+            .inner_join(account::dsl::account.on(album::dsl::user_id.eq(account::dsl::id)))
+            .select(account::all_columns)
+            .first(&mut connection)
+            .map_err(|e| e.into())
+    }
+
     pub fn get_referrals(mm: &ModelManager, id: &Uuid) -> Result<Vec<Account>> {
         let mut connection = mm.conn()?;
 
@@ -201,7 +212,7 @@ impl Account {
                 .ok()
         });
 
-        self.compare_access(mm, user_account)
+        Ok(self.compare_access(mm, user_account))
     }
 
     // check if passed user id has access to self account
@@ -209,7 +220,7 @@ impl Account {
         let user_account =
             user_id.and_then(|user_id| AccountBmc::get_by_user_id(mm, &user_id).ok());
 
-        self.compare_access(mm, user_account)
+        Ok(self.compare_access(mm, user_account))
     }
 
     pub fn has_refferal(&self, mm: &ModelManager, target_account_id: &Uuid) -> Result<bool> {

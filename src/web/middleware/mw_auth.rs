@@ -1,6 +1,5 @@
 use crate::crypt::token::Token;
 use crate::ctx::Ctx;
-use crate::model::account::AccountBmc;
 use crate::model::user::UserBmc;
 use crate::model::ModelManager;
 use crate::web::{set_token_cookie, AUTH_TOKEN};
@@ -63,12 +62,10 @@ async fn _ctx_resolve(mm: State<ModelManager>, cookies: &Cookies) -> CtxExtResul
         .map_err(|_| CtxExtError::FailValidate)?;
 
     // -- Get UserForAuth
-    let user = UserBmc::get(&mm, &token_claims.user_id).map_err(|_| {
+    let (user, account) = UserBmc::get(&mm, &token_claims.user_id).map_err(|_| {
         debug!("error!");
         CtxExtError::UserNotFound
     })?;
-
-    let account = AccountBmc::get(&mm, &user.account_id).map_err(|_| CtxExtError::UserNotFound)?;
 
     // -- Validate Token
     token.validate().map_err(|_| CtxExtError::FailValidate)?;

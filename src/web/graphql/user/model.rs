@@ -2,16 +2,15 @@ use async_graphql::{ComplexObject, Context, InputObject, Result, SimpleObject};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::access::Accesship;
+use crate::access::{Accesship, ResourceAccess};
 use crate::crypt::pass::encrypt_pwd;
 use crate::ctx::Ctx;
 use crate::graphql::guard::{Role, RoleGuard};
 use crate::graphql::scalars::{DateTime, Id};
-use crate::model::account::AccountBmc;
-use crate::model::post::PostBmc;
+use crate::model::post::{PostAccess, PostBmc};
 use crate::model::ModelManager;
-use crate::web::graphql::account::model::Account;
 use crate::web::graphql::error::Error as GraphQLError;
+use crate::web::graphql::post::model::Post;
 
 #[derive(SimpleObject, Debug, Clone, Serialize, Deserialize)]
 #[graphql(complex)]
@@ -33,39 +32,64 @@ pub struct User {
 
 #[ComplexObject]
 impl User {
-    /// user's account - Access only for admin
-    #[graphql(guard = "RoleGuard::new(Role::Admin)")]
-    pub async fn account(&self, ctx: &Context<'_>) -> Result<Account> {
+    pub async fn posts(
+        &self,
+        ctx: &Context<'_>,
+    ) -> Result<Vec<Option<crate::web::graphql::post::model::Post>>> {
         let mm = ctx.data_opt::<ModelManager>();
         let mm = match mm {
             Some(mm) => mm,
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
 
-        let account =
-            AccountBmc::get(mm, &self.account_id.into()).map_err(GraphQLError::ModelError)?;
+        let user_id = ctx.data_opt::<Ctx>().map(|r| r.user_id);
 
-        Ok(account.into())
+        let posts = match self.access_lvl {
+            Some(access_lvl) => {
+                PostBmc::list_with_access(mm, access_lvl, PostAccess::ToUser(self.id.into()))
+                    .map(|r| {
+                        r.into_iter()
+                            .map(|p| match p {
+                                Some(p) => Some(Post::from_db_with_access(p, access_lvl)),
+                                None => None,
+                            })
+                            .collect::<Vec<_>>()
+                    })
+                    .map_err(GraphQLError::ModelError)?
+            }
+            None => PostBmc::has_access_list(mm, user_id, PostAccess::ToUser(self.id.into()))
+                .map(|r| {
+                    r.into_iter()
+                        .map(|(access, p)| match p {
+                            Some(p) => Some(Post::from_db_with_access(p, access)),
+                            None => None,
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .map_err(GraphQLError::ModelError)?,
+        };
+
+        let posts = posts.into_iter().map(|r| r.map(|r| r.into())).collect();
+
+        Ok(posts)
     }
+}
 
-    // pub async fn posts(
-    //     &self,
-    //     ctx: &Context<'_>,
-    // ) -> Result<Vec<Option<crate::web::graphql::post::model::Post>>> {
-    //     let mm = ctx.data_opt::<ModelManager>();
-    //     let mm = match mm {
-    //         Some(mm) => mm,
-    //         None => return Err(GraphQLError::ModalManagerNotInContext.into()),
-    //     };
-
-    //     let user_id = ctx.data_opt::<Ctx>().map(|r| r.user_id);
-    //     let posts =
-    //         PostBmc::list(mm, user_id, &self.id.into()).map_err(GraphQLError::ModelError)?;
-
-    //     let posts = posts.into_iter().map(|r| r.map(|r| r.into())).collect();
-
-    //     Ok(posts)
-    // }
+impl User {
+    fn from_db_with_access(
+        user: crate::model::user::User,
+        access: Accesship,
+    ) -> Result<Self, GraphQLError> {
+        Ok(Self {
+            id: user.id.into(),
+            email: user.email,
+            nick: user.nick,
+            account_id: user.account_id.into(),
+            created_at: user.created_at.into(),
+            updated_at: user.updated_at.into(),
+            access_lvl: Some(access),
+        })
+    }
 }
 
 impl From<crate::model::user::User> for User {
