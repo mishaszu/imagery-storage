@@ -1,8 +1,9 @@
 use async_graphql::{Context, Guard, Result};
 use uuid::Uuid;
 
-use crate::access::Accesship;
+use crate::access::{Accesship, ResourceAccess};
 use crate::model::image::ImageBmc;
+use crate::model::post::PostBmc;
 use crate::web::graphql::error::Error as GraphQLError;
 use crate::{ctx::Ctx, graphql::scalars::Id, model::ModelManager};
 
@@ -32,21 +33,17 @@ impl Guard for CreatorGuard {
             }
         };
 
-        let user_account_id = match app_ctx {
-            Some(ctx) => ctx.account_id,
+        let user_id = match app_ctx {
+            Some(ctx) => ctx.user_id,
             None => return Err(GraphQLError::AccessError("No user logged in".to_string()).into()),
         };
 
-        let post = crate::model::post::PostBmc::get(mm, &self.post_id)
+        let (access, post) = PostBmc::has_access(mm, &self.post_id, Some(user_id))
             .map_err(GraphQLError::ModelError)?;
 
-        let has_access = post
-            .user_access(mm, user_account_id)
-            .map_err(GraphQLError::ModelError)?;
-
-        match (has_access, self.admin_allowed) {
+        match (access, self.admin_allowed) {
             (Accesship::Admin, true) | (Accesship::Owner, _) => Ok(()),
-            _ => Err(GraphQLError::AccessError(user_account_id.to_string()).into()),
+            _ => Err(GraphQLError::AccessError(user_id.to_string()).into()),
         }
     }
 }

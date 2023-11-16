@@ -211,7 +211,7 @@ impl ResourceAccess for PostBmc {
         let seeker_account = seeker_user_id.and_then(|id| AccountBmc::get_by_user_id(mm, &id).ok());
         let (target_post, target_account) = Self::get(mm, target_resource_id)?;
 
-        let access = target_account.compare_access(mm, seeker_account);
+        let access = target_account.compare_access(mm, seeker_account.as_ref());
 
         let post = Self::get_with_access(mm, target_resource_id, access)?;
 
@@ -273,7 +273,7 @@ impl ResourceAccess for PostBmc {
             PostAccess::ToAlbum(album_id) => AccountBmc::get_by_album_id(mm, &album_id)?,
         };
 
-        let access = target_account.compare_access(mm, seeker_account);
+        let access = target_account.compare_access(mm, seeker_account.as_ref());
         let access_lvl: i32 = access.try_into()?;
 
         let filtered_posts = Self::list_with_access(mm, access, extra_search_param)?;
@@ -294,7 +294,7 @@ impl ResourceAccess for PostBmc {
     ) -> crate::model::Result<Vec<Option<Self::Resource>>> {
         let access_lvl: i32 = access.try_into()?;
 
-        let posts = Self::list(mm, extra_search_params)?;
+        let posts = Self::list(mm, extra_search_params.clone())?;
 
         let filtered_posts_iter = posts.into_iter().filter(|post| {
             // filter out all private post if user is subscriber or no user

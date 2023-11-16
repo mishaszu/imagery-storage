@@ -167,7 +167,7 @@ impl ResourceAccess for UserBmc {
         let seeker_account = seeker_user_id.and_then(|id| AccountBmc::get_by_user_id(mm, &id).ok());
         let (target_user, target_account) = Self::get(mm, target_resource_id)?;
 
-        let access = target_account.compare_access(mm, seeker_account);
+        let access = target_account.compare_access(mm, seeker_account.as_ref());
 
         match access {
             Accesship::None => Err(Error::AccessDeniedReturnNoInfo),
@@ -199,14 +199,19 @@ impl ResourceAccess for UserBmc {
 
         let filtered_users = users
             .into_iter()
-            .filter(|(user, account)| {
-                let access = account.compare_access(mm, seeker_account);
+            .filter(|(_user, account)| {
+                let access = account.compare_access(mm, seeker_account.as_ref());
                 match access {
                     Accesship::None => false,
                     _ => true,
                 }
             })
-            .map(|(user, account)| (account.compare_access(mm, seeker_account), Some(user)))
+            .map(|(user, account)| {
+                (
+                    account.compare_access(mm, seeker_account.as_ref()),
+                    Some(user),
+                )
+            })
             .collect();
 
         Ok(filtered_users)

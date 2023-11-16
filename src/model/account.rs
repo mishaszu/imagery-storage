@@ -167,7 +167,7 @@ impl AccountBmc {
 }
 
 impl Account {
-    pub fn compare_access(&self, mm: &ModelManager, seeker_account: Option<Account>) -> Accesship {
+    pub fn compare_access(&self, mm: &ModelManager, seeker_account: Option<&Account>) -> Accesship {
         let seeker_account = match (seeker_account, self.public_lvl) {
             // if seeker has account proceed with check
             (Some(account), _) => account,
@@ -212,7 +212,7 @@ impl Account {
                 .ok()
         });
 
-        Ok(self.compare_access(mm, user_account))
+        Ok(self.compare_access(mm, user_account.as_ref()))
     }
 
     // check if passed user id has access to self account
@@ -220,7 +220,7 @@ impl Account {
         let user_account =
             user_id.and_then(|user_id| AccountBmc::get_by_user_id(mm, &user_id).ok());
 
-        Ok(self.compare_access(mm, user_account))
+        Ok(self.compare_access(mm, user_account.as_ref()))
     }
 
     pub fn has_refferal(&self, mm: &ModelManager, target_account_id: &Uuid) -> Result<bool> {
