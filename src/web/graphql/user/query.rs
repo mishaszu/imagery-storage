@@ -52,10 +52,9 @@ impl UserQuery {
             None => return Err(GraphQLError::ModalManagerNotInContext.into()),
         };
 
-        let user_account_id = ctx.data_opt::<crate::ctx::Ctx>().map(|r| r.account_id);
+        let user_id = ctx.data_opt::<crate::ctx::Ctx>().map(|r| r.user_id);
 
-        let users =
-            UserBmc::has_access_list(mm, user_account_id, ()).map_err(GraphQLError::ModelError)?;
+        let users = UserBmc::has_access_list(mm, user_id, ()).map_err(GraphQLError::ModelError)?;
 
         let users = users
             .into_iter()

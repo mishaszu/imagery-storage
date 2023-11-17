@@ -201,8 +201,10 @@ impl ResourceAccess for UserBmc {
             .into_iter()
             .filter(|(_user, account)| {
                 let access = account.compare_access(mm, seeker_account.as_ref());
-                match access {
-                    Accesship::None => false,
+                match (access, account.is_banned) {
+                    (Accesship::Admin, true) => true,
+                    (Accesship::None, _) => false,
+                    (_, true) => false,
                     _ => true,
                 }
             })

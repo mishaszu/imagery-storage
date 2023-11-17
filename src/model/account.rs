@@ -108,7 +108,7 @@ impl AccountBmc {
 
         users::dsl::users
             .filter(users::dsl::id.eq(user_id))
-            .inner_join(account::dsl::account.on(users::dsl::id.eq(account::dsl::id)))
+            .inner_join(account::dsl::account.on(users::dsl::account_id.eq(account::dsl::id)))
             .select(account::all_columns)
             .first(&mut connection)
             .map_err(|e| e.into())
